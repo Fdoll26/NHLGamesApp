@@ -1,26 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_dates"
+    <!-- Loading State -->
+    <LinearLayout
+        android:id="@+id/loading_layout"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/date_item_height"
-        android:background="@color/card_background"
-        android:elevation="4dp"
-        android:orientation="horizontal"
-        android:padding="@dimen/margin_medium"
-        android:tag="Game Dates Scrollable"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_games"
+        <ProgressBar
+            android:id="@+id/loading_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Loading..."
+            android:textSize="16sp"
+            android:textColor="@android:color/black" />
+
+    </LinearLayout>
+
+    <!-- Content Layout -->
+    <LinearLayout
+        android:id="@+id/content_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="@dimen/margin_small"
-        android:tag="Game For Given Date Scrollable"
-        android:padding="@dimen/margin_medium" />
+        android:orientation="vertical">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- Header -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="NHL Schedule"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:padding="16dp"
+            android:textColor="@android:color/black" />
+
+        <!-- Dates Horizontal RecyclerView -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Select Date"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp"
+            android:textColor="@android:color/black" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_dates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:padding="8dp" />
+
+        <!-- Games Vertical RecyclerView -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Games"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/live_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="● LIVE"
+                android:textColor="#FF4444"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_games"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp" />
+
+        <!-- Empty State -->
+        <LinearLayout
+            android:id="@+id/empty_state_layout"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No games found"
+                android:textSize="18sp"
+                android:textColor="@android:color/darker_gray" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select a different date"
+                android:textSize="14sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Bottom Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btn_today"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Today"
+            android:layout_marginEnd="8dp"
+            style="@style/Widget.AppCompat.Button.Colored" />
+
+        <Button
+            android:id="@+id/btn_refresh"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Refresh"
+            android:layout_marginStart="8dp"
+            style="@style/Widget.AppCompat.Button.Borderless" />
+
+    </LinearLayout>
+
+</LinearLayout>

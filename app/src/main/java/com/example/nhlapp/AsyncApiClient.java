@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import com.example.nhlapp.Objects.Game;
 import com.example.nhlapp.Objects.NHLPlayer;
 import com.example.nhlapp.Objects.Team;
 import com.google.gson.Gson;
@@ -197,9 +198,12 @@ public class AsyncApiClient {
     @SuppressWarnings("unchecked")
     private <T> T parseResponse(String response, Class<T> responseClass) throws Exception {
         try {
+            if (responseClass == String.class) {
+                return (T) response;
+            }
             // Handle specific parsing for known types
-            if (responseClass == GameBoxscore.class) {
-                return (T) parseGameBoxscore(response);
+            if (responseClass == Game.class) {
+                return (T) parseCurrentGame(response);
             }
             // For other types, use generic Gson parsing
             return gson.fromJson(response, responseClass);
@@ -208,53 +212,90 @@ public class AsyncApiClient {
         }
     }
 
-    private GameBoxscore parseGameBoxscore(String response) throws Exception {
-        try {
-            // Parse the JSON response into GameBoxscore object
-            org.json.JSONObject jsonResponse = new org.json.JSONObject(response);
-            GameBoxscore boxscore = new GameBoxscore();
+//    private Game parseCurrentGame(String response) throws Exception {
+//        try {
+//            // Parse the JSON response into GameBoxscore object
+//            org.json.JSONObject jsonResponse = new org.json.JSONObject(response);
+//            Game activeGame = new Game();
+//
+//            // Parse linescore
+//            if (jsonResponse.has("linescore")) {
+//                org.json.JSONObject linescoreJson = jsonResponse.getJSONObject("linescore");
+//
+//                    if (linescoreJson.has("totals")) {
+//                    GameBoxscore.Totals totals = new GameBoxscore.Totals();
+//                    org.json.JSONObject totalsJson = linescoreJson.getJSONObject("totals");
+//                    totals.setHome(totalsJson.optInt("home", 0));
+//                    totals.setAway(totalsJson.optInt("away", 0));
+//                    linescore.setTotals(totals);
+//                }
+//                boxscore.setLinescore(linescore);
+//            }
+//
+//            // Parse playerByGameStats
+//            if (jsonResponse.has("playerByGameStats")) {
+//                org.json.JSONObject playerStatsJson = jsonResponse.getJSONObject("playerByGameStats");
+//                GameBoxscore.PlayerByGameStats playerStats = new GameBoxscore.PlayerByGameStats();
+//
+//                // Parse home team
+//                if (playerStatsJson.has("homeTeam")) {
+//                    Team homeTeam = parseTeamGameData(playerStatsJson.getJSONObject("homeTeam"));
+//                    playerStats.setHomeTeam(homeTeam);
+//                }
+//
+//                // Parse away team
+//                if (playerStatsJson.has("awayTeam")) {
+//                    Team awayTeam = parseTeamGameData(playerStatsJson.getJSONObject("awayTeam"));
+//                    playerStats.setAwayTeam(awayTeam);
+//                }
+//
+//                boxscore.setPlayerByGameStats(playerStats);
+//            }
+//
+//            return boxscore;
+//
+//        } catch (org.json.JSONException e) {
+//            throw new Exception("Failed to parse boxscore JSON: " + e.getMessage(), e);
+//        }
+//    }
+        private Game parseCurrentGame(String response) throws Exception {
+            try {
+                org.json.JSONObject jsonResponse = new org.json.JSONObject(response);
+                Game game = new Game();
 
-            // Parse linescore
-            if (jsonResponse.has("linescore")) {
-                GameBoxscore.Linescore linescore = new GameBoxscore.Linescore();
-                org.json.JSONObject linescoreJson = jsonResponse.getJSONObject("linescore");
-
-                if (linescoreJson.has("totals")) {
-                    GameBoxscore.Totals totals = new GameBoxscore.Totals();
-                    org.json.JSONObject totalsJson = linescoreJson.getJSONObject("totals");
-                    totals.setHome(totalsJson.optInt("home", 0));
-                    totals.setAway(totalsJson.optInt("away", 0));
-                    linescore.setTotals(totals);
+                // Parse actual fields that exist in NHL API response
+                if (jsonResponse.has("id")) {
+                    game.setGameId(jsonResponse.getInt("id"));
                 }
-                boxscore.setLinescore(linescore);
+
+                // Parse home team data
+                if (jsonResponse.has("homeTeam")) {
+                    org.json.JSONObject homeTeamJson = jsonResponse.getJSONObject("homeTeam");
+                    Team homeTeam = parseTeamGameData(homeTeamJson);
+                    game.setHomeTeam(homeTeam);
+
+                    if (homeTeamJson.has("score")) {
+                        game.setHomeScore(homeTeamJson.getInt("score"));
+                    }
+                }
+
+                // Parse away team data
+                if (jsonResponse.has("awayTeam")) {
+                    org.json.JSONObject awayTeamJson = jsonResponse.getJSONObject("awayTeam");
+                    Team awayTeam = parseTeamGameData(awayTeamJson);
+                    game.setAwayTeam(awayTeam);
+
+                    if (awayTeamJson.has("score")) {
+                        game.setAwayScore(awayTeamJson.getInt("score"));
+                    }
+                }
+
+                return game;
+
+            } catch (org.json.JSONException e) {
+                throw new Exception("Failed to parse boxscore JSON: " + e.getMessage(), e);
             }
-
-            // Parse playerByGameStats
-            if (jsonResponse.has("playerByGameStats")) {
-                org.json.JSONObject playerStatsJson = jsonResponse.getJSONObject("playerByGameStats");
-                GameBoxscore.PlayerByGameStats playerStats = new GameBoxscore.PlayerByGameStats();
-
-                // Parse home team
-                if (playerStatsJson.has("homeTeam")) {
-                    Team homeTeam = parseTeamGameData(playerStatsJson.getJSONObject("homeTeam"));
-                    playerStats.setHomeTeam(homeTeam);
-                }
-
-                // Parse away team
-                if (playerStatsJson.has("awayTeam")) {
-                    Team awayTeam = parseTeamGameData(playerStatsJson.getJSONObject("awayTeam"));
-                    playerStats.setAwayTeam(awayTeam);
-                }
-
-                boxscore.setPlayerByGameStats(playerStats);
-            }
-
-            return boxscore;
-
-        } catch (org.json.JSONException e) {
-            throw new Exception("Failed to parse boxscore JSON: " + e.getMessage(), e);
         }
-    }
 
     private Team parseTeamGameData(org.json.JSONObject teamJson) throws org.json.JSONException {
         Team teamData = new Team();

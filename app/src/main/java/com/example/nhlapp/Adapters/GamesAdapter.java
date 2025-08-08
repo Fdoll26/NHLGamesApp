@@ -32,7 +32,7 @@ public class GamesAdapter extends RecyclerView.Adapter<GamesAdapter.GameViewHold
     @Override
     public void onBindViewHolder(@NonNull GameViewHolder holder, int position) {
         Game game = games.get(position);
-        holder.gameDate.setText(game.getDate());
+        holder.gameDate.setText(game.getGameDate());
         holder.gameTeams.setText(game.getHomeTeamName() + " @ Team " + game.getAwayTeamName());
 
         if (game.getHomeScore() > 0 || game.getAwayScore() > 0) {

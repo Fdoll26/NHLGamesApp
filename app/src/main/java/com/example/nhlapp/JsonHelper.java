@@ -61,8 +61,8 @@ public class JsonHelper {
             JSONArray jsonArray = new JSONArray();
             for (Game game : games) {
                 JSONObject gameJson = new JSONObject();
-                gameJson.put("id", game.getId());
-                gameJson.put("date", game.getDate());
+                gameJson.put("id", game.getGameId());
+                gameJson.put("date", game.getGameDate());
                 gameJson.put("homeTeamId", game.getHomeTeamId());
                 gameJson.put("awayTeamId", game.getAwayTeamId());
                 gameJson.put("homeScore", game.getHomeScore());
@@ -83,8 +83,8 @@ public class JsonHelper {
                 List<Game> gameList = gamesBySeason.get(season);
                 for (Game game : gameList) {
                     JSONObject gameJson = new JSONObject();
-                    gameJson.put("id", game.getId());
-                    gameJson.put("date", game.getDate());
+                    gameJson.put("id", game.getGameId());
+                    gameJson.put("date", game.getGameDate());
                     gameJson.put("homeTeamId", game.getHomeTeamId());
                     gameJson.put("awayTeamId", game.getAwayTeamId());
                     gameJson.put("homeScore", game.getHomeScore());

@@ -9,11 +9,9 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.window.OnBackInvokedDispatcher;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.os.BuildCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,6 +35,7 @@ public class SpecificGameActivity extends AppCompatActivity {
     private Game game;
     private Team homeTeam;
     private Team awayTeam;
+    private Game gameResult;
 
     // UI Components
     private TextView homeName;
@@ -56,7 +55,7 @@ public class SpecificGameActivity extends AppCompatActivity {
     // Data and API
     private DataManager dataManager;
     private AsyncApiClient apiClient;
-    private AtomicBoolean isLoadingCancelled = new AtomicBoolean(false);
+    private final AtomicBoolean isLoadingCancelled = new AtomicBoolean(false);
 
     // Current view state
     private enum ViewState {
@@ -75,15 +74,14 @@ public class SpecificGameActivity extends AppCompatActivity {
         Intent intent = getIntent();
         gameId = intent.getIntExtra("gameId", 0);
 
+        // Setup back press handling
         OnBackPressedCallback callback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                isLoadingCancelled.set(true);
-                if (apiClient != null) {
-                    apiClient.cancelAllRequests();
-                }
+                cancelAndFinish();
             }
         };
+        getOnBackPressedDispatcher().addCallback(this, callback);
 
         if (gameId == 0) {
             Toast.makeText(this, "Invalid game ID", Toast.LENGTH_SHORT).show();
@@ -98,7 +96,6 @@ public class SpecificGameActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-//        gameTitle = findViewById(R.id.gameTitle);
         homeName = findViewById(R.id.homeTeamName);
         awayName = findViewById(R.id.awayTeamName);
         gameDate = findViewById(R.id.gameDate);
@@ -153,7 +150,12 @@ public class SpecificGameActivity extends AppCompatActivity {
 
         awayName.setText(awayTeamName);
         homeName.setText(homeTeamName);
-        gameDate.setText(String.format("Date: %s", game.getDate()));
+        if (game.getGameDate() == null) {
+            String setting = String.format("Date: %s", game.getGameDate());
+            Log.d("Trial", setting);
+            gameDate.setText(String.format("Date: %s", game.getGameDate()));
+        }
+
 
         // Update button text
         awayTeamButton.setText(String.format("%s Team", awayTeamName));
@@ -161,8 +163,7 @@ public class SpecificGameActivity extends AppCompatActivity {
 
         // Show score if available
         if (game.getHomeScore() >= 0 && game.getAwayScore() >= 0) {
-            gameScore.setText(String.format("Score: %s %d - %d %s",
-                    awayTeamName, game.getAwayScore(), game.getHomeScore(), homeTeamName));
+            gameScore.setText(String.format("Score: %s %d - %d %s", awayTeamName, game.getAwayScore(), game.getHomeScore(), homeTeamName));
             gameScore.setVisibility(View.VISIBLE);
         } else {
             gameScore.setVisibility(View.GONE);
@@ -172,12 +173,9 @@ public class SpecificGameActivity extends AppCompatActivity {
     private void setupTeamLogos() {
         // Load team logos from local storage if available
         if (homeTeam != null && homeTeam.getLogoUrl() != null && !homeTeam.getLogoUrl().isEmpty()) {
-            // Try to load from local storage first, fallback to URL
             if (homeTeam.getLogoUrl().startsWith("/") || homeTeam.getLogoUrl().startsWith("file://")) {
-                // Local file
                 Picasso.get().load("file://" + homeTeam.getLogoUrl()).into(homeTeamLogo);
             } else {
-                // URL - this will be handled by the async API client to download and cache
                 Picasso.get().load(homeTeam.getLogoUrl()).into(homeTeamLogo);
             }
         }
@@ -195,10 +193,86 @@ public class SpecificGameActivity extends AppCompatActivity {
         statusText.setText("Loading boxscore data...");
         setViewState(ViewState.LOADING);
 
-        // For now, we'll work with the team data we have
-        // If you need to load additional boxscore data from API, implement that here
-        statusText.setText("Team data loaded");
-        showGeneralOverview(); // Default to general overview
+        // Make async API call to get boxscore data
+        String boxscoreUrl = "https://api-web.nhle.com/v1/gamecenter/" + gameId + "/boxscore";
+
+        apiClient.makeAsyncRequest(
+                boxscoreUrl,
+                new AsyncApiClient.ApiCallback<Game>() {
+                    @Override
+                    public void onSuccess(Game result) {
+                        gameResult = result;
+                        updateTeamsWithBoxscoreData();
+                        runOnUiThread(() -> {
+                            statusText.setText("Boxscore data loaded");
+                            showGeneralOverview();
+                        });
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        Log.e(TAG, "Failed to load boxscore: " + error);
+                        // Fall back to showing general overview without boxscore data
+                        runOnUiThread(() -> {
+                            statusText.setText("Using cached team data");
+                            showGeneralOverview();
+                        });
+                    }
+                },
+                Game.class,
+                isLoadingCancelled
+        );
+    }
+
+    private void updateTeamsWithBoxscoreData() {
+        if (gameResult == null ) {
+            return;
+        }
+
+        // Update home team with boxscore data
+        if (gameResult.getHomeTeam() != null) {
+            Team boxscoreHomeTeam = gameResult.getHomeTeam();
+            if (homeTeam != null) {
+                // Merge boxscore player data with existing team data
+                mergeTeamData(homeTeam, boxscoreHomeTeam);
+            } else{
+                homeTeam = boxscoreHomeTeam;
+            }
+        }
+
+        // Update away team with boxscore data
+        if (gameResult.getAwayTeam() != null) {
+            Team boxscoreAwayTeam = gameResult.getAwayTeam();
+            if (awayTeam != null) {
+                // Merge boxscore player data with existing team data
+                mergeTeamData(awayTeam, boxscoreAwayTeam);
+            } else{
+                awayTeam = boxscoreAwayTeam;
+            }
+        }
+
+        // Update game score from boxscore if available
+//        if (gameResult.getLinescore() != null && gameResult.getLinescore().getTotals() != null) {
+        if (gameResult.getAwayScore() > -1 && gameResult.getHomeScore() > -1) {
+            game.setHomeScore(gameResult.getHomeScore());
+            game.setAwayScore(gameResult.getAwayScore());
+            dataManager.addGame(game); // Update in DataManager
+
+            runOnUiThread(this::updateGameHeader);
+        }
+    }
+
+    private void mergeTeamData(Team existingTeam, Team boxscoreTeam) {
+        // Merge player data from boxscore with existing team roster
+        if (boxscoreTeam.getTeamRoster() != null) {
+            for (NHLPlayer boxscorePlayer : boxscoreTeam.getTeamRoster().values()) {
+                // Add or update player in existing team
+                existingTeam.addPlayer(boxscorePlayer);
+
+                // Also update in DataManager
+                dataManager.addPlayer(boxscorePlayer);
+            }
+        }
     }
 
     private void setViewState(ViewState state) {
@@ -247,9 +321,30 @@ public class SpecificGameActivity extends AppCompatActivity {
             comparison.append("Game Score: TBD\n\n");
         }
 
+        // Game-specific statistics from boxscore if available
+//        if (gameResult != null && gameResult.getPlayerByGameStats() != null) {
+        if (gameResult != null) {
+            comparison.append("GAME STATISTICS\n\n");
+            comparison.append(String.format("%-20s %10s %10s\n", "Game Stats", awayTeamName, homeTeamName));
+            comparison.append("─".repeat(40)).append("\n");
+
+            // Add game-specific stats here
+            TeamStats awayGameStats = calculateGameStats(gameResult.getAwayTeam());
+            TeamStats homeGameStats = calculateGameStats(gameResult.getHomeTeam());
+
+            comparison.append(String.format("%-20s %10d %10d\n", "Goals", awayGameStats.getGoals(), homeGameStats.getGoals()));
+            comparison.append(String.format("%-20s %10d %10d\n", "Assists", awayGameStats.getAssists(), homeGameStats.getAssists()));
+            comparison.append(String.format("%-20s %10d %10d\n", "Points", awayGameStats.getPoints(), homeGameStats.getPoints()));
+            comparison.append(String.format("%-20s %10d %10d\n", "Shots on Goal", awayGameStats.getShots(), homeGameStats.getShots()));
+            comparison.append(String.format("%-20s %10d %10d\n", "Hits", awayGameStats.getHits(), homeGameStats.getHits()));
+            comparison.append(String.format("%-20s %10d %10d\n", "Blocked Shots", awayGameStats.getBlockedShots(), homeGameStats.getBlockedShots()));
+            comparison.append(String.format("%-20s %10d %10d\n", "Penalty Minutes", awayGameStats.getPenaltyMinutes(), homeGameStats.getPenaltyMinutes()));
+            comparison.append("\n");
+        }
+
         // Team season statistics comparison
         comparison.append("SEASON STATISTICS\n\n");
-        comparison.append(String.format("%-20s %10s %10s\n", "Statistic", awayTeamName, homeTeamName));
+        comparison.append(String.format("%-20s %10s %10s\n", "Season Stats", awayTeamName, homeTeamName));
         comparison.append("─".repeat(40)).append("\n");
         comparison.append(String.format("%-20s %10d %10d\n", "Games Played",
                 awayTeam.getGamesPlayed() >= 0 ? awayTeam.getGamesPlayed() : 0,
@@ -270,18 +365,6 @@ public class SpecificGameActivity extends AppCompatActivity {
                 awayTeam.getGoalsAgainst() >= 0 ? awayTeam.getGoalsAgainst() : 0,
                 homeTeam.getGoalsAgainst() >= 0 ? homeTeam.getGoalsAgainst() : 0));
 
-        // Player-based statistics
-        comparison.append("\nPLAYER TOTALS\n\n");
-        comparison.append(String.format("%-20s %10s %10s\n", "Player Stats", awayTeamName, homeTeamName));
-        comparison.append("─".repeat(40)).append("\n");
-        comparison.append(String.format("%-20s %10d %10d\n", "Total Goals", awayStats.getGoals(), homeStats.getGoals()));
-        comparison.append(String.format("%-20s %10d %10d\n", "Total Assists", awayStats.getAssists(), homeStats.getAssists()));
-        comparison.append(String.format("%-20s %10d %10d\n", "Total Points", awayStats.getPoints(), homeStats.getPoints()));
-        comparison.append(String.format("%-20s %10d %10d\n", "Total Shots", awayStats.getShots(), homeStats.getShots()));
-        comparison.append(String.format("%-20s %10d %10d\n", "Total Hits", awayStats.getHits(), homeStats.getHits()));
-        comparison.append(String.format("%-20s %10d %10d\n", "Blocked Shots", awayStats.getBlockedShots(), homeStats.getBlockedShots()));
-        comparison.append(String.format("%-20s %10d %10d\n", "Penalty Minutes", awayStats.getPenaltyMinutes(), homeStats.getPenaltyMinutes()));
-
         teamStatsComparison.setText(comparison.toString());
     }
 
@@ -293,6 +376,15 @@ public class SpecificGameActivity extends AppCompatActivity {
         teamStatsComparison.setVisibility(View.GONE);
 
         Team selectedTeam = teamSide.equals("home") ? homeTeam : awayTeam;
+        Team gameTeam = null;
+
+        // Get game-specific team data if available from boxscore
+//        if (gameResult != null && gameResult.getPlayerByGameStats() != null) {
+        if (gameResult != null) {
+            gameTeam = teamSide.equals("home") ?
+                    gameResult.getHomeTeam() :
+                    gameResult.getAwayTeam();
+        }
 
         if (selectedTeam == null || selectedTeam.getTeamRoster().isEmpty()) {
             // Show empty state
@@ -301,9 +393,12 @@ public class SpecificGameActivity extends AppCompatActivity {
         }
 
         // Create and set adapter for player stats
+        // Use game team if available for game-specific stats, otherwise use season team
+        Team teamToDisplay = (gameTeam != null && !gameTeam.getTeamRoster().isEmpty()) ? gameTeam : selectedTeam;
+
         GamePlayerStatsAdapter adapter = new GamePlayerStatsAdapter(
                 this,
-                selectedTeam,
+                teamToDisplay,
                 selectedTeam
         );
         statsRecyclerView.setAdapter(adapter);
@@ -332,6 +427,38 @@ public class SpecificGameActivity extends AppCompatActivity {
         return stats;
     }
 
+    private TeamStats calculateGameStats(Team gameTeam) {
+        // Calculate stats specifically from game data (boxscore)
+        TeamStats stats = new TeamStats();
+
+        if (gameTeam == null || gameTeam.getTeamRoster().isEmpty()) {
+            return stats;
+        }
+
+        // Sum game-specific stats from all players
+        for (NHLPlayer player : gameTeam.getTeamRoster().values()) {
+            if (player != null) {
+                stats.addGoals(player.getGoals());
+                stats.addAssists(player.getAssists());
+                stats.addPoints(player.getPoints());
+                stats.addShots(player.getShotsOnGoal());
+                stats.addHits(player.getHits());
+                stats.addBlockedShots(player.getBlocks());
+                stats.addPenaltyMinutes(player.getPenaltyMinutes());
+            }
+        }
+
+        return stats;
+    }
+
+    private void cancelAndFinish() {
+        isLoadingCancelled.set(true);
+        if (apiClient != null) {
+            apiClient.cancelAllRequests();
+        }
+        finish();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -341,11 +468,4 @@ public class SpecificGameActivity extends AppCompatActivity {
             apiClient.cancelAllRequests();
         }
     }
-
-//    @Override
-//    public void onBackPressed() {
-//        // Cancel ongoing requests before going back
-//
-//        super.onBackPressed();
-//    }
 }

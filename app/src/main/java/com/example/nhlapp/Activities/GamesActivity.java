@@ -165,7 +165,6 @@ public class GamesActivity extends AppCompatActivity {
             }
         }
     }
-
     private void updateSpinnerAndLoadLatestSeason() {
         if (seasons.isEmpty()) {
             return;
@@ -198,8 +197,8 @@ public class GamesActivity extends AppCompatActivity {
             // Check if we already have games for this season from JSON
             if (dataManager.hasGamesForSeason(latestSeason)) {
                 Log.d("GamesActivity", "Using games data loaded from JSON for season: " + latestSeason);
-                List<Game> cachedGames = dataManager.gamesBySeason.get(latestSeason);
-                dataManager.addSeasonGames(latestSeason, cachedGames);
+                // Use the new method to get cached games
+                List<Game> cachedGames = dataManager.getCachedGamesForSeason(latestSeason);
                 updateGamesList(cachedGames);
             } else {
                 Log.d("GamesActivity", "No cached games found for season: " + latestSeason + ", waiting for user selection");
@@ -207,6 +206,47 @@ public class GamesActivity extends AppCompatActivity {
             }
         }
     }
+//    private void updateSpinnerAndLoadLatestSeason() {
+//        if (seasons.isEmpty()) {
+//            return;
+//        }
+//
+//        // Sort seasons in descending order (most recent first)
+//        Collections.sort(seasons, new Comparator<String>() {
+//            @Override
+//            public int compare(String s1, String s2) {
+//                return s2.compareTo(s1); // Reverse order for most recent first
+//            }
+//        });
+//
+//        isUpdatingSpinner = true;
+//        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, seasons);
+//        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//        seasonSpinner.setAdapter(spinnerAdapter);
+//
+//        // Set selection to most recent season (index 0)
+//        seasonSpinner.setSelection(0);
+//        lastSeason = seasonSpinner.getSelectedItem().toString();
+//        isUpdatingSpinner = false;
+//
+//        // Only automatically load games if this is the initial setup (not a user selection)
+//        if (!seasons.isEmpty() && !isUserSelection) {
+//            String latestSeason = seasons.get(0);
+//            lastSeason = latestSeason;
+//            DataManager dataManager = DataManager.getInstance();
+//
+//            // Check if we already have games for this season from JSON
+//            if (dataManager.hasGamesForSeason(latestSeason)) {
+//                Log.d("GamesActivity", "Using games data loaded from JSON for season: " + latestSeason);
+//                List<Game> cachedGames = dataManager.getGamesForSeason().get(latestSeason);
+//                dataManager.addSeasonGames(latestSeason, cachedGames);
+//                updateGamesList(cachedGames);
+//            } else {
+//                Log.d("GamesActivity", "No cached games found for season: " + latestSeason + ", waiting for user selection");
+//                // Don't automatically load - wait for user to select
+//            }
+//        }
+//    }
 
     private void loadGamesForSeason(String requestSeason) {
         // Cancel any existing games task
@@ -270,7 +310,7 @@ public class GamesActivity extends AppCompatActivity {
 
         for (Game game : games) {
             // Extract date part (remove time if present)
-            String gameDate = game.getDate();
+            String gameDate = game.getGameDate();
             if (gameDate.contains("T")) {
                 gameDate = gameDate.split("T")[0];
             }
@@ -295,7 +335,7 @@ public class GamesActivity extends AppCompatActivity {
         if (jsonData != null) {
             try {
                 JSONObject seasonsObj = new JSONObject(jsonData);
-                if (!seasonsObj.has(jsonData)){
+                if (!seasonsObj.has(season)){
                     return;
                 }
                 JSONArray jsonArray = new JSONArray(seasonsObj.get(season));
@@ -305,8 +345,8 @@ public class GamesActivity extends AppCompatActivity {
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject gameJson = jsonArray.getJSONObject(i);
                     Game game = new Game();
-                    game.setId(gameJson.getInt("id"));
-                    game.setDate(gameJson.getString("date"));
+                    game.setGameId(gameJson.getInt("id"));
+                    game.setGameDate(gameJson.getString("date"));
                     game.setHomeTeamId(gameJson.getInt("homeTeamId"));
                     game.setAwayTeamId(gameJson.getInt("awayTeamId"));
 

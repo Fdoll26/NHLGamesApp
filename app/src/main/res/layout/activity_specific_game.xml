@@ -25,8 +25,10 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_team_placeholder" />
+            android:contentDescription="@string/away_team_logo"
+            android:scaleType="fitCenter"/>
+<!--            android:src="@drawable/ic_team_placeholder" />-->
+
             <TextView
                 android:id="@+id/awayTeamName"
                 android:layout_width="wrap_content"
@@ -72,8 +74,9 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_team_placeholder" />
+            android:contentDescription="@string/home_team_logo"
+            android:scaleType="fitCenter"/>
+<!--            android:src="@drawable/ic_team_placeholder" />-->
 
             <TextView
                 android:id="@+id/homeTeamName"

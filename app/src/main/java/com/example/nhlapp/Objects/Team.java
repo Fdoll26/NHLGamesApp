@@ -151,6 +151,15 @@ public class Team {
         }
     }
 
+    public void addPlayer(NHLPlayer player){
+        if(!this.teamRoster.containsKey(player.getPlayerId())){
+            this.teamRoster.put(player.getPlayerId(), player);
+        } else{
+            this.teamRoster.replace(player.getPlayerId(), player);
+        }
+
+    }
+
     public List<NHLPlayer> getDefense(){
         List<NHLPlayer> returnList = new ArrayList<>();
         for(NHLPlayer player: this.teamRoster.values()){

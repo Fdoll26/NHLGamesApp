@@ -86,7 +86,7 @@ public class TeamsActivity extends AppCompatActivity {
         AppSettings settings = AppSettings.getInstance(this);
 
         if (settings.useSingleton()) {
-            ArrayList<Team> recievedTeams = new ArrayList<>(DataManager.getInstance().getTeams());
+            ArrayList<Team> recievedTeams = new ArrayList<>(DataManager.getInstance().getCachedTeams());
             if(!recievedTeams.isEmpty()){
                 teams.clear();
                 teams.addAll(recievedTeams);

@@ -181,7 +181,7 @@ public class NHLApiClient {
                                 int gameId = gameJson.getInt("id");
                                 boolean gameExists = false;
                                 for (Game existingGame : games) {
-                                    if (existingGame.getId() == gameId) {
+                                    if (existingGame.getGameId() == gameId) {
                                         gameExists = true;
                                         break;
                                     }
@@ -189,8 +189,8 @@ public class NHLApiClient {
 
                                 if (!gameExists) {
                                     Game game = new Game();
-                                    game.setId(gameId);
-                                    game.setDate(gameJson.getString("gameDate"));
+                                    game.setGameId(gameId);
+                                    game.setGameDate(gameJson.getString("gameDate"));
 
                                     // Set team IDs
                                     if (gameJson.has("homeTeam")) {
@@ -242,7 +242,7 @@ public class NHLApiClient {
             Collections.sort(games, new Comparator<Game>() {
                 @Override
                 public int compare(Game g1, Game g2) {
-                    return g1.getDate().compareTo(g2.getDate());
+                    return g1.getGameDate().compareTo(g2.getGameDate());
                 }
             });
 

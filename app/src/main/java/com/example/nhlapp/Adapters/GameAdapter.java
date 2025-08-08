@@ -84,8 +84,8 @@ public class GameAdapter extends RecyclerView.Adapter<GameAdapter.GameViewHolder
 //            homeTeamText.setText(game.getHomeTeam().name);
             awayTeamText.setText(game.getAwayTeamName());
             homeTeamText.setText(game.getHomeTeamName());
-            scoreHomeText.setText(game.getHomeScore());
-            scoreAwayText.setText(game.getAwayScore());
+            scoreHomeText.setText(String.valueOf(game.getHomeScore()));
+            scoreAwayText.setText(String.valueOf(game.getAwayScore()));
             statusText.setText(game.getTimeStatus());
         }
     }

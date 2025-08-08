@@ -1,6 +1,7 @@
 package com.example.nhlapp.Adapters;
 
 import android.annotation.SuppressLint;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +35,7 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DateViewHolder
         return new DateViewHolder(view);
     }
 
+    @SuppressLint("ResourceType")
     @Override
     public void onBindViewHolder(@NonNull DateViewHolder holder, @SuppressLint("RecyclerView") int position) {
         String selectedDate = dates.get(position);
@@ -46,11 +48,11 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DateViewHolder
 
         // Highlight selected date
         if (position == selectedPosition) {
-            holder.dayText.setBackgroundResource(R.drawable.selected_date_background);
-            holder.monthText.setBackgroundResource(R.drawable.selected_date_background);
+            holder.dayText.setBackgroundColor(Color.BLUE);
+            holder.monthText.setBackgroundColor(Color.BLUE);
         } else {
-            holder.dayText.setBackgroundResource(R.drawable.date_background);
-            holder.monthText.setBackgroundResource(R.drawable.date_background);
+            holder.dayText.setBackgroundColor(Color.TRANSPARENT);
+            holder.monthText.setBackgroundColor(Color.TRANSPARENT);
         }
 
         holder.itemView.setOnClickListener(v -> {

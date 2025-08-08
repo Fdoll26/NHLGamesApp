@@ -3,4 +3,6 @@
     <string name="save_games_to_json_txt">Save Games To JSON</string>
     <string name="save_players_to_json_txt">Save Players To JSON</string>
     <string name="save_teams_to_json_txt">Save Teams To JSON</string>
+    <string name="away_team_logo">Away Team Logo</string>
+    <string name="home_team_logo">Home Team Logo</string>
 </resources>

@@ -41,6 +41,14 @@
             android:name=".Activities.SettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".Activities.DatesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Activities.SpecificGameActivity"
+            android:exported="false" />
+
         <service
             android:name=".PeriodicSaveService"
             android:exported="false" />
