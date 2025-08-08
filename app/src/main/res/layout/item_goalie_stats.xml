@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+<!--    android:background="@drawable/item_background_selector">-->
+
+    <!-- Player Photo -->
+    <ImageView
+        android:id="@+id/playerPhoto"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_player_placeholder"/>
+<!--        android:background="@drawable/circular_background" />-->
+
+    <!-- Player Name -->
+    <TextView
+        android:id="@+id/playerName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:text="Connor Hellebuyck"
+        android:textSize="12sp"
+
+        android:gravity="start|center_vertical"
+        android:padding="4dp"
+        android:maxLines="2"
+        android:ellipsize="end"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Jersey Number -->
+    <TextView
+        android:id="@+id/jersey"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.7"
+        android:text="37"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Time on Ice -->
+    <TextView
+        android:id="@+id/toi"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:text="60:00"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Saves -->
+    <TextView
+        android:id="@+id/saves"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:text="32"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Shots Against -->
+    <TextView
+        android:id="@+id/shots"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:text="35"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Save Percentage -->
+    <TextView
+        android:id="@+id/savePctg"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:text=".914"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Goals Against -->
+    <TextView
+        android:id="@+id/goalsAgainst"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="3"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Decision -->
+    <TextView
+        android:id="@+id/decision"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:text="W"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Penalty Minutes -->
+    <TextView
+        android:id="@+id/pim"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="0"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+</LinearLayout>

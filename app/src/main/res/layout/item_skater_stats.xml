@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+<!--    android:background="@drawable/item_background_selector">-->
+
+    <ImageView
+        android:id="@+id/playerPhoto"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_player_placeholder"
+        android:background="@drawable/team_logo_placeholder" />
+<!--        android:background="@drawable/circular_background" />-->
+
+    <!-- Player Name -->
+    <TextView
+        android:id="@+id/playerName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:text="Connor McDavid"
+        android:textSize="12sp"
+        android:gravity="start|center_vertical"
+        android:padding="4dp"
+        android:maxLines="2"
+        android:ellipsize="end" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Jersey Number -->
+    <TextView
+        android:id="@+id/jersey"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.7"
+        android:text="97"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Position -->
+    <TextView
+        android:id="@+id/position"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.7"
+        android:text="C"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Time on Ice -->
+    <TextView
+        android:id="@+id/toi"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:text="19:45"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Goals -->
+    <TextView
+        android:id="@+id/goals"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="2"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Assists -->
+    <TextView
+        android:id="@+id/assists"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="1"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Points -->
+    <TextView
+        android:id="@+id/points"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="3"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Shots -->
+    <TextView
+        android:id="@+id/shots"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="5"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp"/>
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Hits -->
+    <TextView
+        android:id="@+id/hits"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="2"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Blocked Shots -->
+    <TextView
+        android:id="@+id/blockedShots"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="1"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+    <!-- Penalty Minutes -->
+    <TextView
+        android:id="@+id/pim"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="0"
+        android:textSize="12sp"
+
+        android:gravity="center"
+        android:padding="4dp" />
+<!--        android:textColor="@color/primary_text_color"/>-->
+
+</LinearLayout>

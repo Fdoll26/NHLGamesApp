@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="App Settings"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Data Management"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <Switch
+            android:id="@+id/switchJsonSaving"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable JSON Saving"
+            android:layout_marginBottom="8dp" />
+
+        <Switch
+            android:id="@+id/switchOnlineMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Online Mode"
+            android:layout_marginBottom="8dp" />
+
+        <Switch
+            android:id="@+id/switchUseSingleton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Use Singleton Data Manager"
+            android:layout_marginBottom="8dp" />
+
+        <Switch
+            android:id="@+id/switchPeriodicSaving"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Periodic Auto-Save"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Manual Actions"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnSaveJson"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Save Data to JSON"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnDeleteJson"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Delete All JSON Files"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnDeleteImages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Delete All Downloaded Images"
+            android:layout_marginBottom="16dp" />
+
+    </LinearLayout>
+
+</ScrollView>

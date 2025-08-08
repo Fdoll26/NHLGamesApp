@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="@color/header_background">
+
+    <!-- Photo placeholder -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Name Header -->
+    <TextView
+        android:id="@+id/nameHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:text="Name"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <!-- Jersey Header -->
+    <TextView
+        android:id="@+id/jerseyHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.7"
+        android:text="#"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <!-- Position Header (Skaters only) -->
+    <TextView
+        android:id="@+id/positionHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.7"
+        android:text="Pos"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <!-- TOI Header -->
+    <TextView
+        android:id="@+id/toiHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:text="TOI"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <!-- Skater Stats Headers -->
+    <TextView
+        android:id="@+id/goalsHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="G"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/assistsHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="A"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/pointsHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="P"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/shotsHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="S"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/hitsHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="H"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/blockedShotsHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="BS"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <!-- Goalie Stats Headers (initially hidden) -->
+    <TextView
+        android:id="@+id/savesHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:text="Saves"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/shotsAgainstHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:text="Shots"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/savePctgHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:text="Sv%"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/goalsAgainstHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="GA"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/decisionHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:text="Decision"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:visibility="gone" />
+
+    <!-- PIM Header (common for both) -->
+    <TextView
+        android:id="@+id/pimHeader"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.5"
+        android:text="PIM"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@color/header_text_color"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+</LinearLayout>

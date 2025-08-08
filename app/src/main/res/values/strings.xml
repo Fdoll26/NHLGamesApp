@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">NHLAPP</string>
+    <string name="save_games_to_json_txt">Save Games To JSON</string>
+    <string name="save_players_to_json_txt">Save Players To JSON</string>
+    <string name="save_teams_to_json_txt">Save Teams To JSON</string>
+</resources>
