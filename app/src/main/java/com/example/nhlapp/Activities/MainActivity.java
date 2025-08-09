@@ -14,6 +14,9 @@ import com.example.nhlapp.Activities.TeamsActivity;
 public class MainActivity extends AppCompatActivity {
     private Button btnTeams, btnPlayers, btnGames, btnDates, btnSettings;
 
+    // Here try to get the JSON loaded in to DataManager and also do theseason polling here if we can
+    // By having the season polling we can ensure fresh start has data and maybe can
+    //help ensure that we can have up to date data, this plays into the reasoning of wht defines up to date
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,4 +58,11 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         startPeriodicSaveService();
     }
+
+    private void tryLoadSeasons(){
+        // Want to see if there is a JSON file first, if so then load in that data and do an async call
+        // to datamanager to get seasons, realistically datamanager should be the main point for these calls but letting dates
+        // do whatever for now
+    }
+
 }

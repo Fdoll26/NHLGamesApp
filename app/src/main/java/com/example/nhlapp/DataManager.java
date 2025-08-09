@@ -1,5 +1,6 @@
 package com.example.nhlapp;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -26,6 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DataManager {
     private static final String TAG = "DataManager";
     private static DataManager instance;
+    private AltImageDownloader imageDownloader;
+    private boolean isDownloadingLogos = false;
 
     // Core data storage
     private final HashMap<Integer, Team> teamsById = new HashMap<>();
@@ -194,7 +197,7 @@ public class DataManager {
     public void getGamesForDateAsync(String date, DataCallback<List<Game>> callback) {
         if (gamesByDate.containsKey(date)) {
             List<Game> dateGames = new ArrayList<>();
-            for (Integer gameId : gamesByDate.get(date)) {
+            for (Integer gameId : Objects.requireNonNull(gamesByDate.get(date))) {
                 Game game = gamesById.get(gameId);
                 if (game != null) {
                     dateGames.add(game);
@@ -561,6 +564,7 @@ public class DataManager {
         new SaveSpecificDataTask(context, dataToSave).execute();
     }
 
+    @SuppressLint("StaticFieldLeak")
     private class SaveSpecificDataTask extends AsyncTask<Void, Void, Void> {
         private Context context;
         private String dataToSave;
@@ -577,9 +581,9 @@ public class DataManager {
                 JsonHelper.saveTeamsToJson(context, new ArrayList<>(teamsById.values()));
 //                JsonHelper.saveTeamsToJson(context, (List<Team>) teamsById.values().stream().iterator());
             if(Objects.equals(dataToSave, "Players"))
-                JsonHelper.savePlayersToJson(context, (List<NHLPlayer>) playersById.values().stream().iterator());
+                JsonHelper.savePlayersToJson(context, (List<NHLPlayer>) playersById.values());
             if(Objects.equals(dataToSave, "Games"))
-                JsonHelper.saveGamesToJson(context, (List<Game>) gamesByDate.values().stream().iterator());// forgot we cant use rust iterators and collapse
+                JsonHelper.saveGamesToJson(context, (List<Game>) gamesById.values());// forgot we cant use rust iterators and collapse
             if(Objects.equals(dataToSave, "Seasons"))
                 JsonHelper.saveSeasonsToJson(context, seasons);
             if(Objects.equals(dataToSave, "Images"))
@@ -588,7 +592,7 @@ public class DataManager {
                 HashMap<String, List<Game>> gameHash = new HashMap<>();
                 for(String season: gamesBySeason.keySet()){
                     List<Game> games = new ArrayList<>();
-                    for(int gameId: gamesBySeason.get(season)){
+                    for(int gameId: Objects.requireNonNull(gamesBySeason.get(season))){
                         if (gamesById.containsKey(gameId))
                             games.add(gamesById.get(gameId));
                     }
@@ -604,6 +608,7 @@ public class DataManager {
         }
     }
 
+    @SuppressLint("StaticFieldLeak")
     private class SaveDataTask extends AsyncTask<Void, Void, Void> {
         private Context context;
 
@@ -614,15 +619,15 @@ public class DataManager {
         @Override
         protected Void doInBackground(Void... voids) {
             // Save all data to JSON files
-            JsonHelper.saveTeamsToJson(context, (List<Team>) teamsById.values().stream().iterator());
-            JsonHelper.savePlayersToJson(context, (List<NHLPlayer>) playersById.values().stream().iterator());
-            JsonHelper.saveGamesToJson(context, (List<Game>) gamesByDate.values().stream().iterator());
+            JsonHelper.saveTeamsToJson(context, (List<Team>) teamsById.values());
+            JsonHelper.savePlayersToJson(context, (List<NHLPlayer>) playersById.values());
+            JsonHelper.saveGamesToJson(context, (List<Game>) gamesById.values());
             JsonHelper.saveSeasonsToJson(context, seasons);
             JsonHelper.saveImagePathsToJson(context);
             HashMap<String, List<Game>> gameHash = new HashMap<>();
             for(String season: gamesBySeason.keySet()){
                 List<Game> games = new ArrayList<>();
-                for(int gameId: gamesBySeason.get(season)){
+                for(int gameId: Objects.requireNonNull(gamesBySeason.get(season))){
                     if (gamesById.containsKey(gameId))
                         games.add(gamesById.get(gameId));
                 }
@@ -935,6 +940,9 @@ public class DataManager {
         if (executorService != null) {
             executorService.shutdown();
         }
+        if (imageDownloader != null) {
+            imageDownloader.shutdown();
+        }
     }
 
     public void clearCache() {
@@ -1010,4 +1018,144 @@ public class DataManager {
         }
 
     }
+
+    public void downloadTeamLogos(DataCallback<String> callback) {
+        if (isDownloadingLogos) {
+            if (callback != null) {
+                callback.onError("Logo download already in progress");
+            }
+            return;
+        }
+
+        getTeamsAsync(new DataCallback<List<Team>>() {
+            @Override
+            public void onSuccess(List<Team> teams) {
+                if (teams == null || teams.isEmpty()) {
+                    if (callback != null) {
+                        callback.onError("No teams available for logo download");
+                    }
+                    return;
+                }
+
+                isDownloadingLogos = true;
+                Log.d(TAG, "Starting logo download for " + teams.size() + " teams");
+
+                imageDownloader.downloadTeamLogos(teams, new AltImageDownloader.DownloadCallback() {
+                    @Override
+                    public void onComplete(int successful, int failed, int skipped) {
+                        isDownloadingLogos = false;
+                        String result = String.format("Logo download complete: %d successful, %d failed, %d skipped", successful, failed, skipped);
+                        Log.d(TAG, result);
+
+                        // Update teams in cache with logo paths
+                        for (Team team : teams) {
+                            if (imageDownloader.hasLocalLogo(team)) {
+                                String logoPath = imageDownloader.getLocalLogoPath(team);
+                                team.setLogoPath(logoPath);
+                                teamsById.put(team.getTeamID(), team);
+                            }
+                        }
+
+                        // Save updated team data
+                        if (context != null) {
+                            AppSettings settings = AppSettings.getInstance(context);
+                            if (settings.isJsonSavingEnabled()) {
+                                saveSpecificDataToJson(context, "Teams");
+                            }
+                        }
+
+                        if (callback != null) {
+                            callback.onSuccess(result);
+                        }
+                    }
+
+                    @Override
+                    public void onProgress(String teamName, boolean success) {
+                        Log.d(TAG, "Logo download progress - " + teamName + ": " + (success ? "success" : "failed/skipped"));
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                isDownloadingLogos = false;
+                Log.e(TAG, "Failed to get teams for logo download: " + error);
+                if (callback != null) {
+                    callback.onError("Failed to get teams: " + error);
+                }
+            }
+        });
+    }
+
+    /**
+     * Update teams with existing logo paths
+     */
+    public void updateTeamsWithLogoPaths() {
+        if (imageDownloader == null) {
+            imageDownloader = new AltImageDownloader(context);
+        }
+
+        List<Team> teams = new ArrayList<>(teamsById.values());
+        imageDownloader.updateTeamsWithLogoPaths(teams);
+
+        // Update cache
+        for (Team team : teams) {
+            teamsById.put(team.getTeamID(), team);
+        }
+    }
+
+    /**
+     * Check if logos are currently being downloaded
+     */
+    public boolean isDownloadingLogos() {
+        return isDownloadingLogos;
+    }
+
+    /**
+     * Get logo cache size
+     */
+    public long getLogoCacheSize() {
+        if (imageDownloader == null) {
+            imageDownloader = new AltImageDownloader(context);
+        }
+        return imageDownloader.getCacheSize();
+    }
+
+    /**
+     * Clear logo cache
+     */
+    public void clearLogoCache() {
+        if (imageDownloader == null) {
+            imageDownloader = new AltImageDownloader(context);
+        }
+        imageDownloader.clearCache();
+
+        // Clear logo paths from teams
+        for (Team team : teamsById.values()) {
+            team.setLogoPath(null);
+        }
+    }
+
+    /**
+     * Clean up old logos
+     */
+    public void cleanupOldLogos() {
+        if (imageDownloader == null) {
+            imageDownloader = new AltImageDownloader(context);
+        }
+        imageDownloader.cleanupOldLogos();
+    }
+
+    // Update the shutdown method to include imageDownloader:
+//    public void shutdown() {
+//        if (apiClient != null) {
+//            apiClient.shutdown();
+//        }
+//        if (executorService != null) {
+//            executorService.shutdown();
+//        }
+//        if (imageDownloader != null) {
+//            imageDownloader.shutdown();
+//        }
+//    }
 }

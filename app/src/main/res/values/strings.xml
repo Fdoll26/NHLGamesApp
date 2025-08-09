@@ -5,4 +5,5 @@
     <string name="save_teams_to_json_txt">Save Teams To JSON</string>
     <string name="away_team_logo">Away Team Logo</string>
     <string name="home_team_logo">Home Team Logo</string>
+    <string name="vsIndicator"> VS </string>
 </resources>

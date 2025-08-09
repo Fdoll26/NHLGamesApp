@@ -15,9 +15,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.nhlapp.Adapters.DateAdapter;
 import com.example.nhlapp.Adapters.GameAdapter;
+import com.example.nhlapp.AltImageDownloader;
 import com.example.nhlapp.AsyncApiClient;
 import com.example.nhlapp.DataCallback;
 import com.example.nhlapp.DataManager;
+import com.example.nhlapp.ImageDownloader;
+import com.example.nhlapp.ImageHelper;
 import com.example.nhlapp.Objects.Game;
 import com.example.nhlapp.Objects.Team;
 import com.example.nhlapp.R;
@@ -31,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,6 +65,10 @@ public class DatesActivity extends AppCompatActivity {
     private Runnable liveUpdateRunnable;
     private boolean isLiveUpdatesEnabled = false;
 
+    private AltImageDownloader imageDownloader;
+    private ImageHelper imageHelper;
+    private boolean logosDownloaded = false;
+
     // Cancellation handling
     private final AtomicBoolean isLoadingCancelled = new AtomicBoolean(false);
 
@@ -88,7 +96,10 @@ public class DatesActivity extends AppCompatActivity {
         gamesByDateCache = new HashMap<>();
         liveUpdateHandler = new Handler();
         currentSeason = "20242025";
+        imageDownloader = new AltImageDownloader(this);
+        imageHelper = ImageHelper.getInstance(this);
     }
+
 
     private void initViews() {
         // Find views
@@ -126,6 +137,35 @@ public class DatesActivity extends AppCompatActivity {
             Log.d(TAG, "Loading season data from API");
             loadSeasonDataFromAPI();
         }
+
+        checkAndDownloadLogos();
+    }
+
+    private void checkAndDownloadLogos() {
+        if (logosDownloaded) {
+            return;
+        }
+
+        // Download team logos in the background
+        dataManager.downloadTeamLogos(new DataCallback<String>() {
+            @Override
+            public void onSuccess(String result) {
+                logosDownloaded = true;
+                Log.d(TAG, "Team logos download completed: " + result);
+                runOnUiThread(() -> {
+                    // Refresh any team-related displays if needed
+                    if (gameAdapter != null) {
+                        gameAdapter.notifyDataSetChanged();
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.w(TAG, "Team logos download failed: " + error);
+                // Continue without logos
+            }
+        });
     }
 
     private void loadDatesFromCachedData() {
@@ -184,8 +224,7 @@ public class DatesActivity extends AppCompatActivity {
                                 }
 
                                 successfulRequests.incrementAndGet();
-                                Log.d(TAG, "Loaded " + teamGames.size() + " games for " + teamAbbr +
-                                        " (Total unique games: " + allGames.size() + ")");
+                                Log.d(TAG, "Loaded " + teamGames.size() + " games for " + teamAbbr + " (Total unique games: " + allGames.size() + ")");
 
                             } catch (Exception e) {
                                 Log.e(TAG, "Error parsing schedule for " + teamAbbr + ": " + e.getMessage());
@@ -294,7 +333,6 @@ public class DatesActivity extends AppCompatActivity {
             // Parse game state/status
             String gameState = gameJson.optString("gameState", "Unknown");
             String gameStatus = gameJson.optString("gameScheduleState", "Unknown");
-
             // Determine display status
             if ("FINAL".equalsIgnoreCase(gameState) || "OFF".equalsIgnoreCase(gameState)) {
 //                game.setGameStatus("Final");
@@ -325,7 +363,7 @@ public class DatesActivity extends AppCompatActivity {
             if (!gamesByDate.containsKey(gameDate)) {
                 gamesByDate.put(gameDate, new ArrayList<>());
             }
-            gamesByDate.get(gameDate).add(game);
+            Objects.requireNonNull(gamesByDate.get(gameDate)).add(game);
         }
 
         // Update cache
@@ -333,7 +371,7 @@ public class DatesActivity extends AppCompatActivity {
 
         // Extract and sort dates
         List<String> dateList = new ArrayList<>(gamesByDate.keySet());
-        Collections.sort(dateList, Collections.reverseOrder()); // Most recent first
+        dateList.sort(Collections.reverseOrder()); // Most recent first
 
         // Update UI on main thread
         runOnUiThread(() -> {
@@ -627,4 +665,7 @@ public class DatesActivity extends AppCompatActivity {
             startLiveUpdates();
         }
     }
+
+
+
 }
