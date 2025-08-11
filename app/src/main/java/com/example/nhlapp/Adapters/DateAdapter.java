@@ -18,6 +18,17 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DateViewHolder
     private List<String> dates;
     private OnDateClickListener listener;
     private int selectedPosition = 1; // Default to today
+    private String selectedDate; // Add this field
+
+    // Add this method
+    public void setSelectedDate(String selectedDate) {
+        this.selectedDate = selectedDate;
+    }
+
+    // Add this method to get the selected date
+    public String getSelectedDate() {
+        return selectedDate;
+    }
 
     public interface OnDateClickListener {
         void onDateClick(String date);
@@ -41,6 +52,10 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DateViewHolder
         String selectedDate = dates.get(position);
         holder.dayText.setText(selectedDate.split("-")[2]);
         holder.monthText.setText(selectedDate.split("-")[1]);
+        String date = dates.get(position);
+
+        // Highlight the selected date
+        boolean isSelected = date.equals(selectedDate);
         //TODO:
         // Need to rework this "date" to try and get out the month and day,
         // Might make custom day class that shows the games so it can be

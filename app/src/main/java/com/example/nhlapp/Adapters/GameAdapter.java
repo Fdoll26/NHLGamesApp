@@ -1,6 +1,9 @@
 package com.example.nhlapp.Adapters;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +19,7 @@ import com.example.nhlapp.Objects.Game;
 import com.example.nhlapp.Objects.Team;
 import com.example.nhlapp.R;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
@@ -74,7 +78,7 @@ public class GameAdapter extends RecyclerView.Adapter<GameAdapter.GameViewHolder
 //        private TextView homeScore;
         private TextView score;
         private TextView gameTime;
-        private TextView gameStatus;
+//        private TextView gameStatus;
         private View vsIndicator;
 
         public GameViewHolder(@NonNull View itemView) {
@@ -101,10 +105,15 @@ public class GameAdapter extends RecyclerView.Adapter<GameAdapter.GameViewHolder
         public void bind(Game game) {
             if (game == null) return;
 
-            // Load team data
-            Team homeTeam = dataManager.getTeamById(game.getHomeTeamId());
-            Team awayTeam = dataManager.getTeamById(game.getAwayTeamId());
 
+            // Load team data
+//            Team homeTeam = dataManager.getTeamById(game.getHomeTeamId());
+//            Team awayTeam = dataManager.getTeamById(game.getAwayTeamId());
+            Team homeTeam = game.getHomeTeam();
+            Team awayTeam = game.getAwayTeam();
+            Log.d("GameAdapter", "Loading game in with away team name " + awayTeam.getAbreviatedName() + " and other name " + awayTeam.getName());
+            Log.d("GameAdapter", "Loading game in with home team name " + homeTeam.getAbreviatedName() + " and other name " + homeTeam.getName());
+            Log.d("GameAdapter", "Loading game in with game home team name " + game.getHomeTeamName() + " and away team " + game.getAwayTeamName());
             // Set team names (use abbreviation if full name not available)
             setTeamName(awayTeamName, awayTeam, game.getAwayTeamName());
             setTeamName(homeTeamName, homeTeam, game.getHomeTeamName());
@@ -121,41 +130,59 @@ public class GameAdapter extends RecyclerView.Adapter<GameAdapter.GameViewHolder
         }
 
         private void setTeamName(TextView textView, Team team, String fallbackName) {
-            if (team != null && team.getName() != null) {
+            if (team != null && team.getAbreviatedName() != null) {
                 textView.setText(team.getAbreviatedName() != null ?
                         team.getAbreviatedName() : team.getName());
+                textView.setVisibility(View.VISIBLE);
             } else if (fallbackName != null && !fallbackName.isEmpty()) {
                 textView.setText(fallbackName);
+                textView.setVisibility(View.VISIBLE);
             } else {
                 textView.setText("TBD");
             }
         }
 
         private void loadTeamLogo(ImageView logoView, Team team) {
-            if (logoView == null) return;
+            Log.d("IDK WHY", String.valueOf(team));
+            String logoPath = team.getLogoPath();
+            Log.d("Logo master", "Got a logo path of " + logoPath);
+            Log.d("Logo URL master", "Got a logo path of " + team.getLogoUrl());
 
-            // Set default placeholder
-            logoView.setImageResource(R.drawable.ic_team_placeholder);
-            logoView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-
-            // Load actual logo if team data is available
-            if (team != null && imageHelper != null) {
-                imageHelper.loadTeamLogo(team, logoView, R.drawable.ic_team_placeholder);
+            if (logoPath != null && !logoPath.isEmpty()) {
+                // Try to load the downloaded logo
+                File logoFile = new File(logoPath);
+                if (logoFile.exists()) {
+                    try {
+                        Bitmap bitmap = BitmapFactory.decodeFile(logoPath);
+                        if (bitmap != null) {
+                            logoView.setImageBitmap(bitmap);
+                            return;
+                        }
+                    } catch (Exception e) {
+                        // If loading fails, fall through to default
+                    }
+                }
             }
+
+
+            // Use default logo if no downloaded logo available
+            logoView.setImageResource(R.drawable.ic_team_placeholder);
         }
 
         private void setScores(Game game) {
             boolean hasScores = game.getHomeScore() >= 0 && game.getAwayScore() >= 0;
 
             if (hasScores) {
+//                Log.d("GameAdapter", "Setting scores of " + game.getHomeScore())
                 // Game has scores - show them
 //                awayScore.setText(String.valueOf(game.getAwayScore()));
-                score.setText(String.format("%b - %b", game.getHomeScore(), game.getAwayScore()));
+                score.setText(String.format("%d - %d", game.getAwayScore(), game.getHomeScore()));
                 score.setVisibility(View.VISIBLE);
 //                vsIndicator.setVisibility(View.GONE);
             } else {
                 // No scores - show VS indicator
                 score.setText(" VS ");
+                score.setVisibility(View.VISIBLE);
 //                awayScore.setVisibility(View.GONE);
 //                homeScore.setVisibility(View.GONE);
 //                vsIndicator.setVisibility(View.VISIBLE);
@@ -168,12 +195,13 @@ public class GameAdapter extends RecyclerView.Adapter<GameAdapter.GameViewHolder
 
             if (hasScores) {
                 // Game is completed or in progress
-                gameStatus.setText("Final");
-                gameStatus.setVisibility(View.VISIBLE);
-                gameTime.setVisibility(View.GONE);
+//                gameStatus.setText("Final");
+//                gameStatus.setVisibility(View.VISIBLE);
+                gameTime.setText("Final");
+//                gameTime.setVisibility(View.GONE);
             } else {
                 // Future game - show start time if available
-                gameStatus.setVisibility(View.GONE);
+//                gameStatus.setVisibility(View.GONE);
 
                 if (game.getStartTime() != null) {
                     try {

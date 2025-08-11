@@ -67,4 +67,5 @@ dependencies {
     implementation("androidx.activity:activity:1.6.0-alpha05")
     implementation("com.squareup.picasso:picasso:2.8")
     implementation("com.google.code.gson:gson:2.13.1")
+    implementation("com.caverock:androidsvg-aar:1.4")
 }

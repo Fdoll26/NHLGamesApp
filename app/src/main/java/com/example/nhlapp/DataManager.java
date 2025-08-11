@@ -1143,7 +1143,7 @@ public class DataManager {
         if (imageDownloader == null) {
             imageDownloader = new AltImageDownloader(context);
         }
-        imageDownloader.cleanupOldLogos();
+        imageDownloader.cleanupOldLogos(1);
     }
 
     // Update the shutdown method to include imageDownloader:

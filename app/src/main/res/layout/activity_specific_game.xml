@@ -51,7 +51,7 @@
                 android:id="@+id/gameScore"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Score: TOR 3 - 2 MTL"
+                android:text="@string/baseGameScore"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginTop="4dp"
@@ -59,6 +59,16 @@
 <!--                android:textColor="@color/primary_text_color"-->
 <!--                android:layout_marginTop="4dp"-->
 <!--                android:visibility="gone" />-->
+
+            <TextView
+                android:id="@+id/gameDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/baseGameDate"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp"
+                android:visibility="gone" />
 
         </LinearLayout>
 

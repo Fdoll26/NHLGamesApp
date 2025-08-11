@@ -27,6 +27,7 @@ public class Team {
     public int gamesLostOT;
     public int goalsFor;
     public int goalsAgainst;
+    public int shotsOnGoal;
     public String name;
     public String abreviatedName;
     public int teamID;
@@ -121,6 +122,14 @@ public class Team {
     public void setGoalsFor(int goalsFor) {
         if(goalsFor >= 0 || this.goalsFor == -1)
             this.goalsFor = goalsFor;
+    }
+
+    public int getShotsOnGoal() {
+        return shotsOnGoal;
+    }
+
+    public void setShotsOnGoal(int shotsOnGoal) {
+        this.shotsOnGoal = shotsOnGoal;
     }
 
     public int getGoalsAgainst() {

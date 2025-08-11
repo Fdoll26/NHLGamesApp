@@ -6,4 +6,6 @@
     <string name="away_team_logo">Away Team Logo</string>
     <string name="home_team_logo">Home Team Logo</string>
     <string name="vsIndicator"> VS </string>
+    <string name="baseGameScore">0 - 0</string>
+    <string name="baseGameDate">MMM DD, HH:MM</string>
 </resources>
