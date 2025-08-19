@@ -1,5 +1,6 @@
 package com.example.nhlapp.Activities;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.nhlapp.Adapters.GamePlayerStatsAdapter;
+import com.example.nhlapp.Adapters.GeneralOverviewAdapter;
 import com.example.nhlapp.AltImageDownloader;
 import com.example.nhlapp.AsyncApiClient;
 import com.example.nhlapp.DataManager;
@@ -61,7 +63,7 @@ public class SpecificGameActivity extends AppCompatActivity {
     private RecyclerView statsRecyclerView;
     private ImageView homeTeamLogo;
     private ImageView awayTeamLogo;
-    private TextView teamStatsComparison;
+    private RecyclerView.Adapter currentAdapter;
 
     // Data and API
     private DataManager dataManager;
@@ -119,7 +121,6 @@ public class SpecificGameActivity extends AppCompatActivity {
         statsRecyclerView = findViewById(R.id.statsRecyclerView);
         homeTeamLogo = findViewById(R.id.homeTeamLogo);
         awayTeamLogo = findViewById(R.id.awayTeamLogo);
-        teamStatsComparison = findViewById(R.id.teamStatsComparison);
 
         // Setup RecyclerView
         statsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -420,6 +421,43 @@ public class SpecificGameActivity extends AppCompatActivity {
         return returnTeam;
     }
 
+    private int parseTimeOnIceToSeconds(String timeString) {
+        if (timeString == null || timeString.trim().isEmpty()) {
+            return 0;
+        }
+
+        try {
+            // Handle formats like "12:34" or "1:23:45"
+            String[] parts = timeString.split(":");
+            int totalSeconds = 0;
+
+            if (parts.length == 2) {
+                // MM:SS format
+                int minutes = Integer.parseInt(parts[0]);
+                int seconds = Integer.parseInt(parts[1]);
+                totalSeconds = minutes * 60 + seconds;
+            } else if (parts.length == 3) {
+                // HH:MM:SS format
+                int hours = Integer.parseInt(parts[0]);
+                int minutes = Integer.parseInt(parts[1]);
+                int seconds = Integer.parseInt(parts[2]);
+                totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            } else {
+                // Try to parse as integer (already in seconds)
+                totalSeconds = Integer.parseInt(timeString);
+            }
+
+            return totalSeconds;
+        } catch (NumberFormatException e) {
+            Log.w(TAG, "Failed to parse time on ice: " + timeString, e);
+            return 0;
+        }
+    }
+
+
+
+
+
     private HashMap<Integer, NHLPlayer> parsePlayers(JSONObject playersList, String abbrevName, int season) throws JSONException {
         HashMap<Integer, NHLPlayer> returnPlayers = new HashMap<>();
         String[] playerTypes = {"forwards", "defense", "goalies"};
@@ -430,8 +468,8 @@ public class SpecificGameActivity extends AppCompatActivity {
                 for (int i = 0; i < playersArray.length(); i++) {
                     JSONObject playerObj = playersArray.getJSONObject(i);
                     NHLPlayer newPlayer = parseNewPlayer(playerObj);
-                    newPlayer.setLogoURL("https://assets/nhle.com/mugs/nhl/"+season+"/"+abbrevName+"/"+newPlayer.getPlayerId());
                     if (newPlayer != null) {
+                        newPlayer.setLogoURL("https://assets/nhle.com/mugs/nhl/"+season+"/"+abbrevName+"/"+newPlayer.getPlayerId()+".png");
                         returnPlayers.put(newPlayer.getPlayerId(), newPlayer);
                     }
                 }
@@ -454,6 +492,7 @@ public class SpecificGameActivity extends AppCompatActivity {
                 newPlayer.setName(nameObj.optString("default", ""));
             }
 
+
             // Skater stats (forwards and defense)
             newPlayer.setGoals(playerObj.optInt("goals", 0));
             newPlayer.setAssists(playerObj.optInt("assists", 0));
@@ -463,7 +502,22 @@ public class SpecificGameActivity extends AppCompatActivity {
             newPlayer.setHits(playerObj.optInt("hits", 0));
             newPlayer.setPowerplayGoals(playerObj.optInt("powerPlayGoals", 0));
             newPlayer.setShotsOnGoal(playerObj.optInt("sog", 0));
-            newPlayer.setTimeOnIce(playerObj.optInt("toi", 0));
+//            newPlayer.setTimeOnIce(playerObj.optInt("toi", 0));
+            if (playerObj.has("toi")) {
+                Object toiValue = playerObj.get("toi");
+                if (toiValue instanceof String) {
+                    // If it's a string like "12:34", convert to seconds
+                    String toiString = (String) toiValue;
+                    newPlayer.setTimeOnIce(parseTimeOnIceToSeconds(toiString));
+                } else if (toiValue instanceof Integer) {
+                    // If it's already in seconds
+                    newPlayer.setTimeOnIce(playerObj.getInt("toi"));
+                } else {
+                    newPlayer.setTimeOnIce(0);
+                }
+            } else {
+                newPlayer.setTimeOnIce(0);
+            }
             newPlayer.setBlocks(playerObj.optInt("blockedShots", 0));
             newPlayer.setGiveaways(playerObj.optInt("giveaways", 0));
             newPlayer.setTakeaways(playerObj.optInt("takeaways", 0));
@@ -472,7 +526,16 @@ public class SpecificGameActivity extends AppCompatActivity {
 
             // Goalie stats
             newPlayer.setSaves(playerObj.optInt("saves", 0));
-            newPlayer.setTotalShots(playerObj.optInt("shotsAgainst", 0));
+//            newPlayer.setTotalShots(playerObj.optInt("shotsAgainst", 0));
+            int shotsAgainst = 0;
+            if (playerObj.has("shotsAgainst")) {
+                shotsAgainst = playerObj.getInt("shotsAgainst");
+            } else if (playerObj.has("shots")) {
+                shotsAgainst = playerObj.getInt("shots");
+            } else if (playerObj.has("sa")) {
+                shotsAgainst = playerObj.getInt("sa");
+            }
+            newPlayer.setTotalShots(shotsAgainst);
             newPlayer.setGoalsAgainst(playerObj.optInt("goalsAgainst", 0));
             newPlayer.setSavePercentage(playerObj.optDouble("savePctg", 0.0));
             newPlayer.setEvenStrengthGoalsAgainst(playerObj.optInt("evenStrengthGoalsAgainst", 0));
@@ -566,94 +629,106 @@ public class SpecificGameActivity extends AppCompatActivity {
             case LOADING:
                 loadingBar.setVisibility(View.VISIBLE);
                 statsRecyclerView.setVisibility(View.GONE);
-                teamStatsComparison.setVisibility(View.GONE);
                 break;
             case GENERAL_OVERVIEW:
             case HOME_TEAM:
             case AWAY_TEAM:
                 loadingBar.setVisibility(View.GONE);
-                // Visibility of other views will be set by individual methods
+                statsRecyclerView.setVisibility(View.VISIBLE);
                 break;
         }
     }
 
     private void showGeneralOverview() {
         setViewState(ViewState.GENERAL_OVERVIEW);
-        statsRecyclerView.setVisibility(View.GONE);
-        teamStatsComparison.setVisibility(View.VISIBLE);
 
         if (homeTeam == null || awayTeam == null) {
-            teamStatsComparison.setText("Team data not available");
+            // Create empty adapter with error message
+            List<String> errorMessage = new ArrayList<>();
+            errorMessage.add("Team data not available");
+            GeneralOverviewAdapter adapter = new GeneralOverviewAdapter(errorMessage);
+            statsRecyclerView.setAdapter(adapter);
             return;
         }
 
-        // Create team stats comparison
-        StringBuilder comparison = new StringBuilder();
-        comparison.append("GAME SUMMARY\n\n");
+        // Create data for general overview
+        List<String> overviewData = createGeneralOverviewData();
+        GeneralOverviewAdapter adapter = new GeneralOverviewAdapter(overviewData);
+        statsRecyclerView.setAdapter(adapter);
+        currentAdapter = adapter;
+
+        Log.d(TAG, "Showing general overview with " + overviewData.size() + " items");
+    }
+
+    @SuppressLint("DefaultLocale")
+    private List<String> createGeneralOverviewData() {
+        List<String> data = new ArrayList<>();
 
         String homeTeamName = homeTeam.getAbreviatedName();
         String awayTeamName = awayTeam.getAbreviatedName();
 
+        // Game Summary Header
+        data.add("GAME SUMMARY");
+        data.add(""); // Empty line for spacing
+
         // Final Score if available
         if (game.getHomeScore() >= 0 && game.getAwayScore() >= 0) {
-            comparison.append(String.format("Final Score: %s %d - %d %s\n\n",
+            data.add(String.format("Final Score: %s %d - %d %s",
                     awayTeamName, game.getAwayScore(), game.getHomeScore(), homeTeamName));
         } else {
-            comparison.append("Game Score: TBD\n\n");
+            data.add("Game Score: TBD");
         }
+        data.add(""); // Empty line
 
         // Game-specific statistics from boxscore if available
         if (gameResult != null) {
-            comparison.append("GAME STATISTICS\n\n");
-            comparison.append(String.format("%-20s %10s %10s\n", "Game Stats", awayTeamName, homeTeamName));
-            comparison.append("─".repeat(40)).append("\n");
+            data.add("GAME STATISTICS");
+            data.add(""); // Empty line
+            data.add(String.format("%-20s %10s %10s", "Game Stats", awayTeamName, homeTeamName));
+            data.add("────────────────────────────────────────");
 
             // Add game-specific stats
             TeamStats awayGameStats = calculateGameStats(gameResult.getAwayTeam());
             TeamStats homeGameStats = calculateGameStats(gameResult.getHomeTeam());
 
-            comparison.append(String.format("%-20s %10d %10d\n", "Goals", awayGameStats.getGoals(), homeGameStats.getGoals()));
-            comparison.append(String.format("%-20s %10d %10d\n", "Assists", awayGameStats.getAssists(), homeGameStats.getAssists()));
-            comparison.append(String.format("%-20s %10d %10d\n", "Points", awayGameStats.getPoints(), homeGameStats.getPoints()));
-            comparison.append(String.format("%-20s %10d %10d\n", "Shots on Goal", awayGameStats.getShots(), homeGameStats.getShots()));
-            comparison.append(String.format("%-20s %10d %10d\n", "Hits", awayGameStats.getHits(), homeGameStats.getHits()));
-            comparison.append(String.format("%-20s %10d %10d\n", "Blocked Shots", awayGameStats.getBlockedShots(), homeGameStats.getBlockedShots()));
-            comparison.append(String.format("%-20s %10d %10d\n", "Penalty Minutes", awayGameStats.getPenaltyMinutes(), homeGameStats.getPenaltyMinutes()));
-            comparison.append("\n");
+            data.add(String.format("%-20s %10d %10d", "Goals", awayGameStats.getGoals(), homeGameStats.getGoals()));
+            data.add(String.format("%-20s %10d %10d", "Assists", awayGameStats.getAssists(), homeGameStats.getAssists()));
+            data.add(String.format("%-20s %10d %10d", "Points", awayGameStats.getPoints(), homeGameStats.getPoints()));
+            data.add(String.format("%-20s %10d %10d", "Shots on Goal", awayGameStats.getShots(), homeGameStats.getShots()));
+            data.add(String.format("%-20s %10d %10d", "Hits", awayGameStats.getHits(), homeGameStats.getHits()));
+            data.add(String.format("%-20s %10d %10d", "Blocked Shots", awayGameStats.getBlockedShots(), homeGameStats.getBlockedShots()));
+            data.add(String.format("%-20s %10d %10d", "Penalty Minutes", awayGameStats.getPenaltyMinutes(), homeGameStats.getPenaltyMinutes()));
+            data.add(""); // Empty line
         }
 
         // Team season statistics comparison
-        comparison.append("SEASON STATISTICS\n\n");
-        comparison.append(String.format("%-20s %10s %10s\n", "Season Stats", awayTeamName, homeTeamName));
-        comparison.append("─".repeat(40)).append("\n");
-        comparison.append(String.format("%-20s %10d %10d\n", "Games Played",
-                awayTeam.getGamesPlayed() >= 0 ? awayTeam.getGamesPlayed() : 0,
-                homeTeam.getGamesPlayed() >= 0 ? homeTeam.getGamesPlayed() : 0));
-        comparison.append(String.format("%-20s %10d %10d\n", "Wins",
-                awayTeam.getGamesWon() >= 0 ? awayTeam.getGamesWon() : 0,
-                homeTeam.getGamesWon() >= 0 ? homeTeam.getGamesWon() : 0));
-        comparison.append(String.format("%-20s %10d %10d\n", "Losses",
-                awayTeam.getGamesLost() >= 0 ? awayTeam.getGamesLost() : 0,
-                homeTeam.getGamesLost() >= 0 ? homeTeam.getGamesLost() : 0));
-        comparison.append(String.format("%-20s %10d %10d\n", "Points",
-                awayTeam.getPoints() >= 0 ? awayTeam.getPoints() : 0,
-                homeTeam.getPoints() >= 0 ? homeTeam.getPoints() : 0));
-        comparison.append(String.format("%-20s %10d %10d\n", "Goals For",
-                awayTeam.getGoalsFor() >= 0 ? awayTeam.getGoalsFor() : 0,
-                homeTeam.getGoalsFor() >= 0 ? homeTeam.getGoalsFor() : 0));
-        comparison.append(String.format("%-20s %10d %10d\n", "Goals Against",
-                awayTeam.getGoalsAgainst() >= 0 ? awayTeam.getGoalsAgainst() : 0,
-                homeTeam.getGoalsAgainst() >= 0 ? homeTeam.getGoalsAgainst() : 0));
+        data.add("SEASON STATISTICS");
+        data.add(""); // Empty line
+        data.add(String.format("%-20s %10s %10s", "Season Stats", awayTeamName, homeTeamName));
+        data.add("────────────────────────────────────────");
+        data.add(String.format("%-20s %10d %10d", "Games Played",
+                Math.max(awayTeam.getGamesPlayed(), 0),
+                Math.max(homeTeam.getGamesPlayed(), 0)));
+        data.add(String.format("%-20s %10d %10d", "Wins", Math.max(awayTeam.getGamesWon(), 0), Math.max(homeTeam.getGamesWon(), 0)));
+        data.add(String.format("%-20s %10d %10d", "Losses",
+                Math.max(awayTeam.getGamesLost(), 0),
+                Math.max(homeTeam.getGamesLost(), 0)));
+        data.add(String.format("%-20s %10d %10d", "Points",
+                Math.max(awayTeam.getPoints(), 0),
+                Math.max(homeTeam.getPoints(), 0)));
+        data.add(String.format("%-20s %10d %10d", "Goals For",
+                Math.max(awayTeam.getGoalsFor(), 0),
+                Math.max(homeTeam.getGoalsFor(), 0)));
+        data.add(String.format("%-20s %10d %10d", "Goals Against",
+                Math.max(awayTeam.getGoalsAgainst(), 0),
+                Math.max(homeTeam.getGoalsAgainst(), 0)));
 
-        teamStatsComparison.setText(comparison.toString());
+        return data;
     }
 
     private void showTeamStats(String teamSide) {
         ViewState newState = teamSide.equals("home") ? ViewState.HOME_TEAM : ViewState.AWAY_TEAM;
         setViewState(newState);
-
-        statsRecyclerView.setVisibility(View.VISIBLE);
-        teamStatsComparison.setVisibility(View.GONE);
 
         Team selectedTeam = teamSide.equals("home") ? homeTeam : awayTeam;
         Team gameTeam = null;
@@ -684,11 +759,15 @@ public class SpecificGameActivity extends AppCompatActivity {
                 this,
                 teamToDisplay,
                 selectedTeam
+//                forwards,
+//                defense,
+//                goalies
         );
         statsRecyclerView.setAdapter(adapter);
+        currentAdapter = adapter;
 
-        Log.d(TAG, "Showing stats for " + teamSide + " team: " + teamToDisplay.getAbreviatedName() +
-                " with " + teamToDisplay.getTeamRoster().size() + " players");
+        Log.d(TAG, "Showing stats for " + teamSide + " team: " + teamToDisplay.getAbreviatedName() );
+//                " with " + forwards.size() + " forwards, " + defense.size() + " defense, " + goalies.size() + " goalies");
     }
 
     private TeamStats calculateTeamTotals(Team team) {

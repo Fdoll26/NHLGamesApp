@@ -2,34 +2,67 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Loading State -->
-    <LinearLayout
-        android:id="@+id/loading_layout"
+<!--    <LinearLayout-->
+<!--        android:id="@+id/loading_layout"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="vertical"-->
+<!--        android:gravity="center"-->
+<!--        android:padding="24dp"-->
+<!--        android:visibility="gone">-->
+
+<!--        <ProgressBar-->
+<!--            android:id="@+id/loading_progress_bar"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginBottom="16dp" />-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/status_text"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Loading..."-->
+<!--            android:textSize="16sp"-->
+<!--            android:textColor="@android:color/black" />-->
+
+<!--    </LinearLayout>-->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/linearLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="24dp"
-        android:visibility="gone">
+        android:layout_height="wrap_content">
 
-        <ProgressBar
-            android:id="@+id/loading_progress_bar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+        <Spinner
+            android:id="@+id/seasonSpinner"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginLeft="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/saveGamesBtn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <TextView
-            android:id="@+id/status_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Loading..."
-            android:textSize="16sp"
-            android:textColor="@android:color/black" />
+        <ToggleButton
+            android:id="@+id/saveGamesBtn"
+            android:layout_width="100dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="6dp"
+            android:enabled="true"
+            android:gravity="right"
+            android:text="@string/save_games_to_json_txt"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/seasonSpinner"
+            app:layout_constraintTop_toTopOf="@+id/seasonSpinner">
 
-    </LinearLayout>
+        </ToggleButton>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Content Layout -->
     <LinearLayout

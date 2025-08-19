@@ -42,9 +42,45 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewGames"
+<!--    <androidx.recyclerview.widget.RecyclerView-->
+<!--        android:id="@+id/recyclerViewGames"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent" />-->
+
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:background="@color/background_light"
+        android:orientation="vertical">
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"/>
+
+<!--        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout-->
+<!--            android:id="@+id/swipe_refresh"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_width="match_parent"/>-->
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewDates"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/date_item_height"
+            android:background="@color/card_background"
+            android:tag="Game Dates Scrollable"
+            android:elevation="4dp"
+            android:orientation="horizontal"
+            android:padding="@dimen/margin_small" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewGames"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="@dimen/margin_small"
+            android:tag="Game For Given Date Scrollable"
+            android:padding="@dimen/margin_medium" />
+
+
+    </LinearLayout>
 
 </LinearLayout>

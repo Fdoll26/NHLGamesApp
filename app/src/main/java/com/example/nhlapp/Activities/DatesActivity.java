@@ -5,7 +5,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -58,6 +62,7 @@ public class DatesActivity extends AppCompatActivity {
     private RecyclerView gamesRecyclerView;
     private ProgressBar loadingProgressBar;
     private TextView statusText;
+    private Spinner seasonSpinner;
     private DateAdapter dateAdapter;
     private GameAdapter gameAdapter;
 
@@ -78,6 +83,8 @@ public class DatesActivity extends AppCompatActivity {
     private Handler liveUpdateHandler;
     private Runnable liveUpdateRunnable;
     private boolean isLiveUpdatesEnabled = false;
+    private boolean isUserSelection = false;
+    private boolean isUpdatingSpinner = false;
 
     private AltImageDownloader imageDownloader;
     private ImageHelper imageHelper;
@@ -118,14 +125,15 @@ public class DatesActivity extends AppCompatActivity {
         imageHelper = ImageHelper.getInstance(this);
         seasons = new ArrayList<>();
         currentTeams = new ArrayList<>();
+        seasonSpinner = findViewById(R.id.seasonSpinner);
     }
 
     private void initViews() {
         // Find views
         dateRecyclerView = findViewById(R.id.recycler_dates);
         gamesRecyclerView = findViewById(R.id.recycler_games);
-        loadingProgressBar = findViewById(R.id.loading_progress_bar);
-        statusText = findViewById(R.id.status_text);
+//        loadingProgressBar = findViewById(R.id.loading_progress_bar);
+//        statusText = findViewById(R.id.status_text);
 
         // Setup date RecyclerView
         LinearLayoutManager dateLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
@@ -143,11 +151,48 @@ public class DatesActivity extends AppCompatActivity {
         gameAdapter = new GameAdapter(games, this::onGameClicked);
         gamesRecyclerView.setAdapter(gameAdapter);
 
+//        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, seasons);
+//        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//        seasonSpinner.setAdapter(spinnerAdapter);
+
+
+        seasonSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // Ignore if we're programmatically updating the spinner
+                if (isUpdatingSpinner) {
+                    return;
+                }
+
+                if (position >= 0 && position < seasons.size()) {
+                    String newSeason = seasons.get(position);
+
+                    // Only proceed if season actually changed
+                    if (!newSeason.equals(currentSeason)) {
+                        currentSeason = newSeason;
+                        isUserSelection = true;
+                        Log.d(TAG, "User selected new season: " + currentSeason);
+
+                        // Check if we have teams loaded before proceeding
+                        if (allTeams != null && !allTeams.isEmpty()) {
+                            loadTeamsAndSchedules();
+                        } else {
+                            Log.d(TAG, "Teams not loaded yet, will load schedules after teams are available");
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
         // Initially show loading state
         showLoadingState("Loading season data...");
     }
 
     private void loadInitialData() {
+
         // Check if we have cached season data
         if (dataManager.hasGamesForSeason(currentSeason)) {
             Log.d(TAG, "Using cached season data");
@@ -206,8 +251,18 @@ public class DatesActivity extends AppCompatActivity {
                     }
 
                     if (!seasons.isEmpty()) {
-                        currentSeason = seasons.get(seasons.size()-2);
+//                        currentSeason = seasons.get(seasons.size()-2);
+                        seasons.sort(new Comparator<String>() {
+                            @Override
+                            public int compare(String s1, String s2) {
+                                return s2.compareTo(s1); // Reverse order for most recent first
+                            }
+                        });
+                        runOnUiThread(() -> {
+                            updateSpinnerWithSeasons();
+                        });
                     }
+
 
                     Log.d(TAG, "Got seasons: " + seasons.size());
 
@@ -218,7 +273,11 @@ public class DatesActivity extends AppCompatActivity {
                     Log.e(TAG, "Error parsing seasons response", e);
                     // Use fallback seasons
                     seasons = new ArrayList<>(Arrays.asList("20242025", "20232024", "20222223", "20212022", "20202021"));
-                    currentSeason = seasons.get(0);
+                    if (currentSeason != null)
+                        currentSeason = seasons.get(0);
+                    runOnUiThread(() -> {
+                        updateSpinnerWithSeasons();
+                    });
                     loadTeamsAsync();
                 }
             }
@@ -228,14 +287,18 @@ public class DatesActivity extends AppCompatActivity {
                 Log.w(TAG, "Failed to get seasons from API: " + error);
                 // Use fallback seasons
                 seasons = new ArrayList<>(Arrays.asList("20242025", "20232024", "20222023", "20212022", "20202021"));
-                currentSeason = seasons.get(0);
+                if (currentSeason != null)
+                    currentSeason = seasons.get(0);
+                runOnUiThread(() -> {
+                    updateSpinnerWithSeasons();
+                });
                 loadTeamsAsync();
             }
         }, String.class, isLoadingCancelled);
     }
 
     private void loadTeamsAsync() {
-        runOnUiThread(() -> updateStatusText("Loading team information..."));
+//        runOnUiThread(() -> updateStatusText("Loading team information..."));
 
         String teamsUrl = STATS_BASE_URL + "/team";
 
@@ -283,6 +346,12 @@ public class DatesActivity extends AppCompatActivity {
 
 
     private void loadTeamsAndSchedules() {
+
+        if (allTeams == null || allTeams.isEmpty()) {
+            Log.w(TAG, "allTeams is null or empty, cannot load schedules yet");
+            return;
+        }
+
         Log.d(TAG, "Starting to load schedules for all NHL teams");
 
         List<Game> allGames = Collections.synchronizedList(new ArrayList<>());
@@ -291,7 +360,7 @@ public class DatesActivity extends AppCompatActivity {
         AtomicInteger successfulRequests = new AtomicInteger(0);
 
         List<AsyncApiClient.ApiRequest<String>> requests = new ArrayList<>();
-
+        currentTeams.clear();
         for(Team team: allTeams){
             String apiUrl = "https://api-web.nhle.com/v1/club-schedule-season/" + team.getAbreviatedName() + "/" + currentSeason;
 
@@ -343,16 +412,19 @@ public class DatesActivity extends AppCompatActivity {
         }
 
         // Execute all requests concurrently
-        runOnUiThread(() -> updateStatusText("Loading schedules for " + allTeams.size() + " teams..."));
+//        runOnUiThread(() -> updateStatusText("Loading schedules for " + allTeams.size() + " teams..."));
+        Log.d(TAG, "Loading schedules for " + allTeams.size() + " teams...");
         apiClient.makeAsyncRequests(requests);
+
     }
 
     private void checkIfAllRequestsComplete(AtomicInteger completedRequests, List<Game> allGames) {
         int completed = completedRequests.incrementAndGet();
 
-        runOnUiThread(() -> {
-            updateStatusText("Loaded " + completed + "/" + allTeams.size() + " team schedules");
-        });
+//        runOnUiThread(() -> {
+//            updateStatusText("Loaded " + completed + "/" + allTeams.size() + " team schedules");
+//        });
+        Log.d(TAG, "Loaded " + completed + "/" + allTeams.size() + " team schedules");
 
         if (completed >= allTeams.size()) {
             Log.d(TAG, "All team schedule requests completed. Total games: " + allGames.size());
@@ -443,8 +515,7 @@ public class DatesActivity extends AppCompatActivity {
             }
         }
 
-        Log.d(TAG, "Teams with existing logos: " + teamsWithExistingLogos +
-                ", Teams needing download: " + teamsWithoutLogos.size());
+        Log.d(TAG, "Teams with existing logos: " + teamsWithExistingLogos + ", Teams needing download: " + teamsWithoutLogos.size());
 
         // Update UI immediately for teams that already have logos
         if (teamsWithExistingLogos > 0) {
@@ -462,8 +533,7 @@ public class DatesActivity extends AppCompatActivity {
             imageDownloader.downloadTeamLogos(teamsWithoutLogos, new AltImageDownloader.DownloadCallback() {
                 @Override
                 public void onComplete(int successful, int failed, int skipped) {
-                    Log.d(TAG, "Logo downloads completed: " + successful + " successful, " +
-                            failed + " failed, " + skipped + " skipped");
+                    Log.d(TAG, "Logo downloads completed: " + successful + " successful, " + failed + " failed, " + skipped + " skipped");
 
                     // Update all teams with their new logo paths
                     for (Team team : teamsWithoutLogos) {
@@ -742,6 +812,8 @@ public class DatesActivity extends AppCompatActivity {
                 // Extract logo URL if available
                 if (homeTeamJson.has("logo")) {
                     temp.logoUrl = homeTeamJson.getString("logo");
+                    if(temp.logoUrl.contains("_secondary"))
+                        temp.logoUrl = temp.logoUrl.replace("_secondary", "");
                 }
 
                 Team fullTeamInfo = findTeamById(temp.getTeamID());
@@ -791,6 +863,8 @@ public class DatesActivity extends AppCompatActivity {
                 // Extract logo URL if available
                 if (awayTeamJson.has("logo")) {
                     temp.logoUrl = awayTeamJson.getString("logo");
+                    if(temp.logoUrl.contains("_secondary"))
+                        temp.logoUrl = temp.logoUrl.replace("_secondary", "");
                 }
 
                 // Find full team info from allTeams list
@@ -967,7 +1041,8 @@ public class DatesActivity extends AppCompatActivity {
                 dateAdapter.notifyDataSetChanged();
 
                 // Scroll to the selected date to make it visible
-                dateRecyclerView.smoothScrollToPosition(selectedIndex);
+//                dateRecyclerView.smoothScrollToPosition(selectedIndex);
+                dateRecyclerView.scrollToPosition(selectedIndex);
 
                 Log.d(TAG, "Updated date selection to: " + selectedDate + " at index: " + selectedIndex);
             } else {
@@ -1098,32 +1173,32 @@ public class DatesActivity extends AppCompatActivity {
     }
 
     private void showLoadingState(String message) {
-        loadingProgressBar.setVisibility(View.VISIBLE);
-        statusText.setVisibility(View.VISIBLE);
-        statusText.setText(message);
+//        loadingProgressBar.setVisibility(View.VISIBLE);
+//        statusText.setVisibility(View.VISIBLE);
+//        statusText.setText(message);
         dateRecyclerView.setVisibility(View.GONE);
         gamesRecyclerView.setVisibility(View.GONE);
     }
 
     private void hideLoadingState() {
-        loadingProgressBar.setVisibility(View.GONE);
-        statusText.setVisibility(View.GONE);
+//        loadingProgressBar.setVisibility(View.GONE);
+//        statusText.setVisibility(View.GONE);
         dateRecyclerView.setVisibility(View.VISIBLE);
         gamesRecyclerView.setVisibility(View.VISIBLE);
     }
 
     private void showErrorState(String message) {
-        loadingProgressBar.setVisibility(View.GONE);
-        statusText.setVisibility(View.VISIBLE);
-        statusText.setText(message);
+//        loadingProgressBar.setVisibility(View.GONE);
+//        statusText.setVisibility(View.VISIBLE);
+//        statusText.setText(message);
         dateRecyclerView.setVisibility(View.GONE);
         gamesRecyclerView.setVisibility(View.GONE);
         showMessage(message);
     }
 
-    private void updateStatusText(String message) {
-        statusText.setText(message);
-    }
+//    private void updateStatusText(String message) {
+//        statusText.setText(message);
+//    }
 
     private String getTodayDateString() {
         Calendar cal = Calendar.getInstance();
@@ -1187,6 +1262,29 @@ public class DatesActivity extends AppCompatActivity {
         }
 
         Log.d(TAG, "Created fallback teams list: " + allTeams.size());
+    }
+
+    private void updateSpinnerWithSeasons() {
+        if (seasons.isEmpty()) {
+            return;
+        }
+
+        isUpdatingSpinner = true;
+
+        // Create new adapter with populated seasons
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, seasons);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        seasonSpinner.setAdapter(spinnerAdapter);
+
+        // Set selection to most recent season (index 0)
+        if (!seasons.isEmpty()) {
+            seasonSpinner.setSelection(0);
+            currentSeason = seasons.get(0);
+        }
+
+        isUpdatingSpinner = false;
+
+        Log.d(TAG, "Updated spinner with " + seasons.size() + " seasons, selected: " + currentSeason);
     }
 
     private String getFullTeamName(String abbreviation) {

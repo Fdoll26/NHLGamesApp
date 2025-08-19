@@ -1,6 +1,8 @@
 package com.example.nhlapp.Adapters;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +16,7 @@ import com.example.nhlapp.Objects.NHLPlayer;
 import com.example.nhlapp.Objects.Team;
 import com.example.nhlapp.R;
 import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Callback;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,26 +51,40 @@ public class GamePlayerStatsAdapter extends RecyclerView.Adapter<RecyclerView.Vi
 
     private void setupItems(Team teamData) {
         items.clear();
-
+        List<NHLPlayer> forwards = new ArrayList<>();
+        List<NHLPlayer> defense = new ArrayList<>();
+        List<NHLPlayer> goalies = new ArrayList<>();
         // Add forwards section
-        if (teamData.getForwards() != null && !teamData.getForwards().isEmpty()) {
+        for (NHLPlayer player : teamData.getTeamRoster().values()) {
+            if (player != null && player.getPosition() != null) {
+                String position = player.getPosition().toUpperCase();
+                if (position.equals("G")) {
+                    goalies.add(player);
+                } else if (position.equals("D")) {
+                    defense.add(player);
+                } else {
+                    forwards.add(player);
+                }
+            }
+        }
+        if (!forwards.isEmpty()) {
             items.add(new SectionHeader("Forwards"));
             items.add(new SkaterHeader());
-            items.addAll(teamData.getForwards());
+            items.addAll(forwards);
         }
 
         // Add defense section
-        if (teamData.getDefense() != null && !teamData.getDefense().isEmpty()) {
+        if (!defense.isEmpty()) {
             items.add(new SectionHeader("Defense"));
             items.add(new SkaterHeader());
-            items.addAll(teamData.getDefense());
+            items.addAll(defense);
         }
 
         // Add goalies section
-        if (teamData.getGoalies() != null && !teamData.getGoalies().isEmpty()) {
+        if (!goalies.isEmpty()) {
             items.add(new SectionHeader("Goalies"));
             items.add(new GoalieHeader());
-            items.addAll(teamData.getGoalies());
+            items.addAll(goalies);
         }
     }
 
@@ -167,12 +184,13 @@ public class GamePlayerStatsAdapter extends RecyclerView.Adapter<RecyclerView.Vi
 
     private void bindSkaterStats(SkaterViewHolder holder, NHLPlayer player) {
         // Load player photo (but don't save to storage as requested)
-        loadPlayerPhoto(holder.playerPhoto, player.getPlayerId());
+        loadPlayerPhoto(holder.playerPhoto, player.getPlayerId(), getTeamAbbreviation());
 
         holder.playerName.setText(player.getName());
         holder.jersey.setText(String.valueOf(player.getJerseyNumber()));
         holder.position.setText(player.getPosition());
         holder.toi.setText(String.format(Locale.US, "%.3f", player.getTimeOnIce()));
+        holder.toi.setText(formatTimeOnIce(player.getTimeOnIce()));
         holder.goals.setText(String.valueOf(player.getGoals()));
         holder.assists.setText(String.valueOf(player.getAssists()));
         holder.points.setText(String.valueOf(player.getPoints()));
@@ -182,29 +200,122 @@ public class GamePlayerStatsAdapter extends RecyclerView.Adapter<RecyclerView.Vi
         holder.pim.setText(String.valueOf(player.getPenaltyMinutes()));
     }
 
+    // Helper method to format seconds back to MM:SS for display
+    @SuppressLint("DefaultLocale")
+    public static String formatTimeOnIce(float totalSeconds) {
+        if (totalSeconds <= 0) {
+            return "0:00";
+        }
+
+        int hours = (int) (totalSeconds / 3600);
+        int minutes = (int) ((totalSeconds % 3600) / 60);
+        int seconds = (int) (totalSeconds % 60);
+
+        if (hours > 0) {
+            return String.format("%d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format("%d:%02d", minutes, seconds);
+        }
+    }
+
     private void bindGoalieStats(GoalieViewHolder holder, NHLPlayer player) {
         // Load player photo (but don't save to storage as requested)
-        loadPlayerPhoto(holder.playerPhoto, player.getPlayerId());
+        loadPlayerPhoto(holder.playerPhoto, player.getPlayerId(), getTeamAbbreviation());
 
         holder.playerName.setText(player.getName());
         holder.jersey.setText(String.valueOf(player.getJerseyNumber()));
-        holder.toi.setText(String.format(Locale.US, "%.3f", player.getTimeOnIce()));
+//        holder.toi.setText(String.format(Locale.US, "%.3f", player.getTimeOnIce()));
+        holder.saves.setText(formatTimeOnIce(player.getTimeOnIce()));
         holder.saves.setText(String.valueOf(player.getSaves()));
-        holder.shots.setText(String.valueOf(player.getShotsAgainst()));
+
+        holder.shots.setText(String.valueOf(player.getTotalShots()));
         holder.savePctg.setText(String.format(Locale.US, "%.3f", player.getSavePercentage()));
         holder.goalsAgainst.setText(String.valueOf(player.getGoalsAgainst()));
 //        holder.decision.setText(player.get());
     }
 
-    private void loadPlayerPhoto(ImageView imageView, int playerId) {
-        // Generate NHL headshot URL (don't save to storage as requested)
-        String headshotUrl = String.format("https://assets.nhle.com/mugs/nhl/20232024/%d.png", playerId);
+//    private void loadPlayerPhoto(ImageView imageView, String headshotPath, int playerId) {
+//        // Generate NHL headshot URL (don't save to storage as requested)
+//        String headshotUrl = String.format("https://assets.nhle.com/mugs/nhl/20232024/%d.png", playerId);
+//
+////        Picasso.get()
+////                .load(headshotUrl)
+////                .placeholder(R.drawable.ic_player_placeholder)
+////                .error(R.drawable.ic_player_placeholder)
+////                .into(imageView);
+//        Log.d("GamePlayerStatsAdapter", "Trying to get player headshot of " + headshotPath);
+//        try{
+//            Picasso.get()
+//                    .load(headshotPath)
+//                    .placeholder(R.drawable.ic_player_placeholder)
+//                    .error(R.drawable.ic_player_placeholder)
+//                    .into(imageView);
+//        } catch (Exception e) {
+//            Picasso.get()
+//                .load(headshotUrl)
+//                .placeholder(R.drawable.ic_player_placeholder)
+//                .error(R.drawable.ic_player_placeholder)
+//                .into(imageView);
+//        }
+//
+//    }
+
+    /**
+     * Improved player photo loading with multiple fallback URLs
+     */
+    private void loadPlayerPhoto(ImageView imageView, int playerId, String teamAbbrev) {
+        if (playerId <= 0) {
+            imageView.setImageResource(R.drawable.ic_player_placeholder);
+            return;
+        }
+
+        // Try multiple URL patterns in order of preference
+        String[] urlPatterns = {
+                // Current season headshots (most likely to work)
+                "https://assets.nhle.com/mugs/nhl/20242025/" + teamAbbrev + "/" + playerId + ".png",
+                "https://cms.nhl.bamgrid.com/images/headshots/current/168x168/" + playerId + ".jpg",
+
+                // Previous season as fallback
+                "https://assets.nhle.com/mugs/nhl/20232024/" + playerId + ".png",
+
+                // Alternative NHL API endpoints
+                "https://cms.nhl.bamgrid.com/images/headshots/current/60x60/" + playerId + ".jpg",
+                "https://www-league.nhlstatic.com/images/headshots/current/168x168/" + playerId + ".jpg",
+        };
+
+        tryLoadPlayerPhoto(imageView, urlPatterns, 0, playerId, teamAbbrev);
+    }
+
+    /**
+     * Recursively try different URL patterns until one works
+     */
+    private void tryLoadPlayerPhoto(ImageView imageView, String[] urlPatterns, int urlIndex, int playerId, String teamAbbrev) {
+        if (urlIndex >= urlPatterns.length) {
+            // All URLs failed, show placeholder
+            Log.d("GamePlayerStatsAdapter", "All headshot URLs failed for player " + playerId);
+            imageView.setImageResource(R.drawable.ic_player_placeholder);
+            return;
+        }
+
+        String currentUrl = urlPatterns[urlIndex];
+        Log.d("GamePlayerStatsAdapter", "Trying headshot URL " + (urlIndex + 1) + "/" + urlPatterns.length + " for player " + playerId + ": " + currentUrl);
 
         Picasso.get()
-                .load(headshotUrl)
+                .load(currentUrl)
                 .placeholder(R.drawable.ic_player_placeholder)
-                .error(R.drawable.ic_player_placeholder)
-                .into(imageView);
+                .into(imageView, new Callback() {
+                    @Override
+                    public void onSuccess() {
+                        Log.d("GamePlayerStatsAdapter", "Successfully loaded headshot for player " + playerId + " from URL: " + currentUrl);
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        Log.d("GamePlayerStatsAdapter", "Failed to load headshot from URL: " + currentUrl + ", trying next...");
+                        // Try the next URL pattern
+                        tryLoadPlayerPhoto(imageView, urlPatterns, urlIndex + 1, playerId, teamAbbrev);
+                    }
+                });
     }
 
     private void sortByColumn(String column) {
@@ -417,6 +528,13 @@ public class GamePlayerStatsAdapter extends RecyclerView.Adapter<RecyclerView.Vi
                 header.setOnClickListener(v -> listener.onHeaderClick(column));
             }
         }
+    }
+
+    private String getTeamAbbreviation() {
+        if (team != null && team.getAbreviatedName() != null) {
+            return team.getAbreviatedName();
+        }
+        return "NHL";
     }
 
     static class SkaterViewHolder extends RecyclerView.ViewHolder {

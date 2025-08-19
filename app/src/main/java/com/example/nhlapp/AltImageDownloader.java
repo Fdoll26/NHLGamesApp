@@ -243,6 +243,9 @@ public class AltImageDownloader {
             Log.w(TAG, "Could not determine logo URL for team: " + team.getAbreviatedName());
             return false;
         }
+        if(logoUrl.contains("_secondary")){
+            logoUrl = logoUrl.replace("_secondary", "");
+        }
 
         Log.d(TAG, "Downloading logo for " + team.getAbreviatedName() + " from: " + logoUrl);
 

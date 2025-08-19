@@ -1,9 +1,10 @@
 package com.example.nhlapp.Activities;
 
 import android.content.Context;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
+import android.os.Handler;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -14,6 +15,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.example.nhlapp.Adapters.DateAdapter;
 import com.example.nhlapp.AppSettings;
 import com.example.nhlapp.DataCallback;
 import com.example.nhlapp.DataManager;
@@ -29,21 +41,34 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GamesActivity extends AppCompatActivity {
+    private static final String TAG = "GamesActivity";
     private Spinner seasonSpinner;
     private ToggleButton saveGamesBtn;
-    private RecyclerView recyclerView;
-    private GamesAdapter adapter;
-    private List<Game> gameItems = new ArrayList<>();
+    private RecyclerView gamesRecyclerView;
+    private RecyclerView datesRecyclerView;
+    private GamesAdapter gameAdapter;
+    private DateAdapter dateAdapter;
+    private List<String> dates = new ArrayList<>();
+    private List<Game> games = new ArrayList<>();
     private List<String> seasons = new ArrayList<>();
+    private Map<String, List<Game>> gamesByDateCache = new HashMap<>();
 
-    // Keep track of current async task to cancel if needed
-    private FetchGamesTask currentGamesTask;
-    private FetchSeasonsTask currentSeasonsTask;
+    private String selectedDate;
+
     private boolean isUserSelection = false;
     private String lastSeason = "";
+
+    private ExecutorService executorService;
+    private Handler mainHandler;
+
+    // Keep track of current tasks to cancel if needed
+    private Future<?> currentGamesTask;
+    private Future<?> currentSeasonsTask;
 
     // Flag to prevent spinner listener from triggering during programmatic changes
     private boolean isUpdatingSpinner = false;
@@ -52,7 +77,8 @@ public class GamesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_games);
-
+        executorService = Executors.newCachedThreadPool();
+        mainHandler = new Handler(Looper.getMainLooper());
         initViews();
         setupRecyclerView();
         setupSpinnerAndBtn();
@@ -64,6 +90,9 @@ public class GamesActivity extends AppCompatActivity {
         super.onDestroy();
         // Cancel any ongoing tasks when activity is destroyed
         cancelCurrentTasks();
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
     }
 
     private void cancelCurrentTasks() {
@@ -80,13 +109,19 @@ public class GamesActivity extends AppCompatActivity {
     private void initViews() {
         saveGamesBtn = findViewById(R.id.saveGamesBtn);
         seasonSpinner = findViewById(R.id.seasonSpinner);
-        recyclerView = findViewById(R.id.recyclerViewGames);
+        gamesRecyclerView = findViewById(R.id.recyclerViewGames);
+        datesRecyclerView = findViewById(R.id.recyclerViewDates);
     }
 
     private void setupRecyclerView() {
-        adapter = new GamesAdapter(gameItems, this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(adapter);
+        gameAdapter = new GamesAdapter(games, this);
+        gamesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        gamesRecyclerView.setAdapter(gameAdapter);
+
+        dateAdapter = new DateAdapter(dates, this::selectDate);
+        datesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        gamesRecyclerView.setAdapter(dateAdapter);
+
     }
 
     private void setupSpinnerAndBtn() {
@@ -95,9 +130,9 @@ public class GamesActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 DataManager manager = DataManager.getInstance();
-                if(!gameItems.isEmpty()){
+                if(!games.isEmpty()){
                     String selectedSeason = seasonSpinner.getSelectedItem().toString();
-                    manager.addSeasonGames(selectedSeason, gameItems);
+                    manager.addSeasonGames(selectedSeason, games);
                 }
                 manager.saveSpecificDataToJson(context, "Games");
             }
@@ -156,12 +191,7 @@ public class GamesActivity extends AppCompatActivity {
             });
         } else {
             if (settings.isOnlineMode()) {
-                // Cancel any existing seasons task
-                if (currentSeasonsTask != null && !currentSeasonsTask.isCancelled()) {
-                    currentSeasonsTask.cancel(true);
-                }
-                currentSeasonsTask = new FetchSeasonsTask();
-                currentSeasonsTask.execute();
+                fetchSeasonsAsync();
             }
         }
     }
@@ -171,7 +201,7 @@ public class GamesActivity extends AppCompatActivity {
         }
 
         // Sort seasons in descending order (most recent first)
-        Collections.sort(seasons, new Comparator<String>() {
+        seasons.sort(new Comparator<String>() {
             @Override
             public int compare(String s1, String s2) {
                 return s2.compareTo(s1); // Reverse order for most recent first
@@ -206,47 +236,86 @@ public class GamesActivity extends AppCompatActivity {
             }
         }
     }
-//    private void updateSpinnerAndLoadLatestSeason() {
-//        if (seasons.isEmpty()) {
-//            return;
+
+    private String getTodayDateString() {
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        return sdf.format(cal.getTime());
+    }
+
+    private void updateDateSelection(String selectedDate) {
+        if (dateAdapter != null && dates != null) {
+            // Find the index of the selected date
+            int selectedIndex = dates.indexOf(selectedDate);
+
+            if (selectedIndex != -1) {
+                // Update the adapter with the selected date
+                dateAdapter.setSelectedDate(selectedDate);
+                dateAdapter.notifyDataSetChanged();
+
+                // Scroll to the selected date to make it visible
+                datesRecyclerView.smoothScrollToPosition(selectedIndex);
+
+                Log.d(TAG, "Updated date selection to: " + selectedDate + " at index: " + selectedIndex);
+            } else {
+                Log.w(TAG, "Selected date not found in dates list: " + selectedDate);
+            }
+        }
+    }
+
+    private void updateGamesDisplay(List<Game> gamesToShow) {
+        for(Game games: gamesToShow){
+            Log.d("GameAdapter", "Loading game in with away team name " + games.getAwayTeam().getAbreviatedName() + " and other name " + games.getAwayTeam().getName());
+            Log.d("GameAdapter", "Loading game in with home team name " + games.getHomeTeam().getAbreviatedName() + " and other name " + games.getHomeTeam().getName());
+            Log.d("GameAdapter", "Loading game in with game home team name " + games.getHomeTeamName() + " and away team " + games.getAwayTeamName());
+
+        }
+        games.clear();
+        if (gamesToShow != null) {
+            games.addAll(gamesToShow);
+        }
+        gameAdapter.notifyDataSetChanged();
+        Log.d(TAG, "Updated games display with " + games.size() + " games");
+    }
+
+    private void selectDate(String date) {
+        Log.d(TAG, "Selecting date: " + date);
+
+//        if (!getTodayDateString().equals(date)) {
+//            stopLiveUpdates();
 //        }
-//
-//        // Sort seasons in descending order (most recent first)
-//        Collections.sort(seasons, new Comparator<String>() {
-//            @Override
-//            public int compare(String s1, String s2) {
-//                return s2.compareTo(s1); // Reverse order for most recent first
+
+        selectedDate = date;
+
+        // Update the date adapter to highlight the selected date and scroll to it
+        updateDateSelection(date);
+
+        if (gamesByDateCache.containsKey(date)) {
+            List<Game> cachedGames = gamesByDateCache.get(date);
+            updateGamesDisplay(cachedGames);
+            Log.d(TAG, "Using cached games for " + date + ": " + cachedGames.size() + " games");
+
+//            if (getTodayDateString().equals(date)) {
+//                startLiveUpdates();
 //            }
-//        });
-//
-//        isUpdatingSpinner = true;
-//        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, seasons);
-//        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-//        seasonSpinner.setAdapter(spinnerAdapter);
-//
-//        // Set selection to most recent season (index 0)
-//        seasonSpinner.setSelection(0);
-//        lastSeason = seasonSpinner.getSelectedItem().toString();
-//        isUpdatingSpinner = false;
-//
-//        // Only automatically load games if this is the initial setup (not a user selection)
-//        if (!seasons.isEmpty() && !isUserSelection) {
-//            String latestSeason = seasons.get(0);
-//            lastSeason = latestSeason;
-//            DataManager dataManager = DataManager.getInstance();
-//
-//            // Check if we already have games for this season from JSON
-//            if (dataManager.hasGamesForSeason(latestSeason)) {
-//                Log.d("GamesActivity", "Using games data loaded from JSON for season: " + latestSeason);
-//                List<Game> cachedGames = dataManager.getGamesForSeason().get(latestSeason);
-//                dataManager.addSeasonGames(latestSeason, cachedGames);
-//                updateGamesList(cachedGames);
-//            } else {
-//                Log.d("GamesActivity", "No cached games found for season: " + latestSeason + ", waiting for user selection");
-//                // Don't automatically load - wait for user to select
+            return;
+        }
+        DataManager dataManager = DataManager.getInstance();
+        ArrayList<Game> gamesForDate = dataManager.getGamesForDate(date);
+        if (gamesForDate != null && !gamesForDate.isEmpty()) {
+            if(!gamesByDateCache.containsKey(date))
+                gamesByDateCache.put(date, gamesForDate);
+            updateGamesDisplay(gamesByDateCache.get(date));
+            Log.d(TAG, "Using DataManager games for " + date + ": " + gamesForDate.size() + " games");
+
+//            if (getTodayDateString().equals(date)) {
+//                startLiveUpdates();
 //            }
-//        }
-//    }
+        } else {
+            updateGamesDisplay(new ArrayList<>());
+            Log.d(TAG, "No games found for " + date);
+        }
+    }
 
     private void loadGamesForSeason(String requestSeason) {
         // Cancel any existing games task
@@ -259,7 +328,7 @@ public class GamesActivity extends AppCompatActivity {
         if (settings.useSingleton()) {
             if (settings.isJsonSavingEnabled()) {
                 loadGamesFromJson(requestSeason);
-                if(!gameItems.isEmpty())
+                if(!games.isEmpty())
                     return;
             }
 
@@ -292,19 +361,19 @@ public class GamesActivity extends AppCompatActivity {
             }
 
             if (settings.isOnlineMode()) {
-                currentGamesTask = new FetchGamesTask();
-                currentGamesTask.execute(requestSeason);
+                fetchGamesAsync(requestSeason);
             }
         }
     }
 
     private void updateGamesList(List<Game> games) {
-        gameItems.clear();
+
 
         if (games.isEmpty()) {
-            adapter.notifyDataSetChanged();
+            gameAdapter.notifyDataSetChanged();
             return;
         }
+        games.clear();
 
         String currentDate = null;
 
@@ -323,11 +392,11 @@ public class GamesActivity extends AppCompatActivity {
             }
 
             // Add the game
-            gameItems.add(game);
+            games.add(game);
         }
-        Log.d("GamesActivity", "updateGamesList with " + gameItems.size() + " new games added");
+        Log.d("GamesActivity", "updateGamesList with " + games.size() + " new games added");
 
-        adapter.notifyDataSetChanged();
+        gameAdapter.notifyDataSetChanged();
     }
 
     private void loadGamesFromJson(String season) {
@@ -373,123 +442,144 @@ public class GamesActivity extends AppCompatActivity {
             }
         }
     }
-
-    private class FetchSeasonsTask extends AsyncTask<Void, Void, List<String>> {
-        @Override
-        protected List<String> doInBackground(Void... voids) {
-            // Check if task was cancelled
-            if (isCancelled()) {
-                return null;
-            }
-            return NHLApiClient.getSeasons();
+    private void fetchSeasonsAsync() {
+        // Cancel any existing seasons task
+        if (currentSeasonsTask != null && !currentSeasonsTask.isDone()) {
+            currentSeasonsTask.cancel(true);
         }
 
-        @Override
-        protected void onPostExecute(List<String> result) {
-            // Only proceed if task wasn't cancelled and activity still exists
-            if (!isCancelled() && result != null && !isFinishing()) {
-                seasons.clear();
-                seasons.addAll(result);
-                updateSpinnerAndLoadLatestSeason();
+        currentSeasonsTask = executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                // Check if task was cancelled
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
+
+                try {
+                    List<String> result = NHLApiClient.getSeasons();
+
+                    // Post result back to main thread
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Only proceed if activity still exists and task wasn't cancelled
+                            if (result != null && !isFinishing() &&
+                                    currentSeasonsTask != null && !currentSeasonsTask.isCancelled()) {
+                                seasons.clear();
+                                seasons.addAll(result);
+                                updateSpinnerAndLoadLatestSeason();
+                            }
+                            // Clear reference
+                            currentSeasonsTask = null;
+                        }
+                    });
+                } catch (Exception e) {
+                    if (!Thread.currentThread().isInterrupted()) {
+                        Log.e("GamesActivity", "Error fetching seasons: " + e.getMessage());
+                    }
+                    // Clear reference on main thread
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            currentSeasonsTask = null;
+                        }
+                    });
+                }
             }
-            // Clear reference
-            if (currentSeasonsTask == this) {
-                currentSeasonsTask = null;
-            }
+        });
+    }
+
+    private void fetchGamesAsync(String requestSeason) {
+        // Cancel any existing games task
+        if (currentGamesTask != null && !currentGamesTask.isDone()) {
+            currentGamesTask.cancel(true);
         }
 
-        @Override
-        protected void onCancelled() {
-            super.onCancelled();
-            // Clear reference
-            if (currentSeasonsTask == this) {
-                currentSeasonsTask = null;
+        final AtomicBoolean isCancelled = new AtomicBoolean(false);
+
+        currentGamesTask = executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                // Check if task was cancelled before starting
+                if (Thread.currentThread().isInterrupted()) {
+                    return;
+                }
+
+                Log.d("GamesActivity", "Starting fetch for season: " + requestSeason);
+
+                List<Game> result = new ArrayList<>();
+                boolean wasInterrupted = false;
+
+                try {
+                    // Pass the cancellation flag to the API client
+                    result = NHLApiClient.getGamesForSeason(requestSeason, isCancelled);
+                } catch (Exception e) {
+                    // Check if the exception is due to interruption/cancellation
+                    if (e.getMessage() != null && e.getMessage().contains("Request cancelled")) {
+                        wasInterrupted = true;
+                        Log.d("GamesActivity", "Games fetch was cancelled due to interruption for season: " + requestSeason);
+                    } else {
+                        Log.e("GamesActivity", "Error fetching games for season " + requestSeason + ": " + e.getMessage());
+                    }
+                }
+
+                final boolean finalWasInterrupted = wasInterrupted;
+                final List<Game> finalResult = result;
+
+                // Post result back to main thread
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Don't update UI if task was cancelled or interrupted
+                        if (isCancelled.get() || finalWasInterrupted || Thread.currentThread().isInterrupted()) {
+                            Log.d("GamesActivity", "Task was cancelled/interrupted, not updating UI for season: " + requestSeason);
+                            return;
+                        }
+
+                        // Only proceed if activity still exists
+                        if (!isFinishing()) {
+                            // Verify this is still the season we want (user might have changed selection)
+                            String currentSelectedSeason = null;
+                            if (seasonSpinner.getSelectedItem() != null) {
+                                currentSelectedSeason = seasonSpinner.getSelectedItem().toString();
+                            }
+
+                            // Only update if this matches the currently selected season
+                            if (requestSeason.equals(currentSelectedSeason)) {
+                                Log.d("GamesActivity", "Updating games list for season: " + requestSeason + " with " + finalResult.size() + " games");
+                                updateGamesList(finalResult);
+                                DataManager dataManager = DataManager.getInstance();
+                                dataManager.addSeasonGames(currentSelectedSeason, finalResult);
+                            } else {
+                                Log.d("GamesActivity", "Discarding results for season: " + requestSeason + " (current selection: " + currentSelectedSeason + ")");
+                            }
+                        }
+
+                        // Clear reference
+                        currentGamesTask = null;
+                    }
+                });
             }
+        });
+
+        // Set up cancellation callback for the current task
+        if (currentGamesTask != null) {
+            executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        currentGamesTask.get(); // Wait for completion
+                    } catch (Exception e) {
+                        // Task was cancelled or failed
+                        isCancelled.set(true);
+                        Log.d("GamesActivity", "FetchGamesTask cancelled for season: " + requestSeason);
+                    }
+                }
+            });
         }
     }
 
-    private class FetchGamesTask extends AsyncTask<String, Void, List<Game>> {
-        private String seasonRequested;
-        private final AtomicBoolean isCancelled = new AtomicBoolean(false);
-        private boolean wasInterrupted = false;
 
-        @Override
-        protected void onCancelled() {
-            super.onCancelled();
-            // Signal to API client that this task is cancelled
-            isCancelled.set(true);
-            if (currentGamesTask == this) {
-                currentGamesTask = null;
-            }
-            Log.d("GamesActivity", "FetchGamesTask cancelled for season: " + seasonRequested);
-        }
 
-        @Override
-        protected List<Game> doInBackground(String... seasons) {
-            // Check if task was cancelled before starting
-            if (isCancelled()) {
-                return null;
-            }
-
-            seasonRequested = seasons[0];
-            Log.d("GamesActivity", "Starting fetch for season: " + seasonRequested);
-
-            try {
-                // Pass the cancellation flag to the API client
-                return NHLApiClient.getGamesForSeason(seasons[0], isCancelled);
-            } catch (Exception e) {
-                // Check if the exception is due to interruption/cancellation
-                if (e.getMessage() != null && e.getMessage().contains("Request cancelled")) {
-                    wasInterrupted = true;
-                    Log.d("GamesActivity", "Games fetch was cancelled due to interruption for season: " + seasonRequested);
-                } else {
-                    Log.e("GamesActivity", "Error fetching games for season " + seasonRequested + ": " + e.getMessage());
-                }
-                return new ArrayList<>(); // Return empty list on error
-            }
-        }
-
-        @Override
-        protected void onPostExecute(List<Game> result) {
-            // Don't update UI if task was cancelled or interrupted
-            if (isCancelled() || wasInterrupted) {
-                Log.d("GamesActivity", "Task was cancelled/interrupted, not updating UI for season: " + seasonRequested);
-                return;
-            }
-
-            // Only proceed if activity still exists
-            if (result != null && !isFinishing()) {
-                // Verify this is still the season we want (user might have changed selection)
-                String currentSelectedSeason = null;
-                if (seasonSpinner.getSelectedItem() != null) {
-                    currentSelectedSeason = seasonSpinner.getSelectedItem().toString();
-                }
-
-                // Only update if this matches the currently selected season
-                if (seasonRequested.equals(currentSelectedSeason)) {
-                    Log.d("GamesActivity", "Updating games list for season: " + seasonRequested + " with " + result.size() + " games");
-                    updateGamesList(result);
-                    DataManager dataManager = DataManager.getInstance();
-                    dataManager.addSeasonGames(currentSelectedSeason, result);
-                } else {
-                    Log.d("GamesActivity", "Discarding results for season: " + seasonRequested + " (current selection: " + currentSelectedSeason + ")");
-                }
-            }
-
-            // Clear reference
-            if (currentGamesTask == this) {
-                currentGamesTask = null;
-            }
-        }
-
-//        @Override
-//        protected void onCancelled() {
-//            super.onCancelled();
-//            Log.d("GamesActivity", "FetchGamesTask cancelled in onCancelled()");
-//            // Clear reference
-//            if (currentGamesTask == this) {
-//                currentGamesTask = null;
-//            }
-//        }
-    }
 }
